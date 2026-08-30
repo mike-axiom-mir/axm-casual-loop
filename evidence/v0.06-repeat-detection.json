@@ -1,0 +1,31 @@
+{
+  "schema": "axm.causal-loop.repeat-action-detection/v0.06",
+  "sourceHead": "847906ddbe42c3883c188596d7ee14743703695a",
+  "workflowRunId": 33333263477,
+  "testCount": 39,
+  "atlasHash": "3c187f9ac63736771afd9f76e5f0e985da4f53575e3cc4459575ddc8274bbf5a",
+  "summary": {
+    "caseCount": 208,
+    "convergedCount": 193,
+    "failedCount": 15,
+    "uniqueRealizedPathCount": 183,
+    "uniqueEndStateCount": 11,
+    "deterministicMismatchCount": 0,
+    "hardInvariantFailureCaseCount": 15,
+    "contradictionCaseCount": 0,
+    "orphanExternalWriteKeys": [],
+    "unresolvedExternalWriteKeys": [
+      "player.blockingDoor",
+      "player.triggerAlarm"
+    ],
+    "failuresByReason": {
+      "no_relevant_module": 15
+    }
+  },
+  "interpretation": [
+    "Adding repeated same-action schedules exposed one-shot behavior that the 145-case distinct-action probe could not see.",
+    "The failing cases remained deterministic; the defect was semantic incompleteness rather than nondeterministic execution.",
+    "BLOCK_DOOR and TRIGGER_ALARM could be resolved once but some later repeats could leave pending direction with no relevant module able to consume it.",
+    "The next repair should make incident modules reusable without weakening convergence or receipt evidence."
+  ]
+}
