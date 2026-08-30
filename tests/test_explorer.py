@@ -40,6 +40,8 @@ class CausalAtlasTests(unittest.TestCase):
         self.assertEqual(summary["failuresByReason"], {})
         self.assertEqual(summary["hardInvariantFailureCaseCount"], 0)
         self.assertEqual(summary["contradictionCaseCount"], 0)
+        self.assertEqual(summary["authorityViolationCaseCount"], 0)
+        self.assertEqual(summary["readViolationCaseCount"], 0)
         self.assertEqual(summary["orphanExternalWriteKeys"], [])
         self.assertEqual(summary["unresolvedExternalWriteKeys"], [])
 
