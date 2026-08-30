@@ -49,7 +49,7 @@ def build_proof() -> dict:
             "departureDelay": resumed["endState"]["train.departureDelay"],
         },
         "testCommand": "python -m unittest discover -s tests -v",
-        "testCount": 25,
+        "testCount": 30,
     }
 
 
