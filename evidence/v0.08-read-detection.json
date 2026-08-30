@@ -1,0 +1,38 @@
+{
+  "schema": "axm.causal-loop.read-scope-detection/v0.08",
+  "sourceHead": "b9d5211b214e3008ca4d547799137dff72e1c07e",
+  "workflowRunId": 33333733216,
+  "testCount": 49,
+  "atlasHash": "857f4646392fc2901b8578369a83ed5c78b86891298184dc00b5c1364b3ebce3",
+  "atlasSummary": {
+    "caseCount": 208,
+    "convergedCount": 63,
+    "failedCount": 145,
+    "failuresByReason": {"read_scope_violation": 145},
+    "deterministicMismatchCount": 0,
+    "hardInvariantFailureCaseCount": 145,
+    "contradictionCaseCount": 0,
+    "authorityViolationCaseCount": 0,
+    "readViolationCaseCount": 145,
+    "orphanExternalWriteKeys": [],
+    "unresolvedExternalWriteKeys": [
+      "player.blockingDoor",
+      "player.talkingToPassenger",
+      "player.triggerAlarm"
+    ],
+    "uniqueRealizedPathCount": 138,
+    "uniqueEndStateCount": 20
+  },
+  "confirmedDirectDetection": {
+    "moduleId": "09-guard-investigate",
+    "phase": "transition",
+    "undeclaredKey": "player.triggerAlarm",
+    "scenario": "BLOCK_DOOR"
+  },
+  "interpretation": [
+    "The scene was deterministic before read enforcement but some modules depended on state keys not declared in their reads contract.",
+    "The read gate converted those hidden dependencies into explicit deterministic failures before affected module writes could commit.",
+    "The generic read-scope enforcement tests passed while existing train behavior failed, separating detector correctness from scene-contract correctness.",
+    "The next repair should declare the actual dependencies rather than restoring whole-state access."
+  ]
+}
