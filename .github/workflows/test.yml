@@ -25,3 +25,5 @@ jobs:
         run: git diff --exit-code -- evidence/v0.03-checkpoint-proof.json
       - name: Export observer demo receipt
         run: python scripts/export_demo_receipt.py --output /tmp/axm-causal-loop-demo-receipt.json
+      - name: Generate bounded causal atlas
+        run: python scripts/generate_atlas.py --output /tmp/v0.05-causal-atlas.json
