@@ -1,21 +1,34 @@
 # AXM Causal Loop Fabric
 
-A source-honest prototype for testing whether a bounded deterministic loop can keep fixed structural boundaries while small shared-state modules produce different valid causal interiors under different external interventions.
+A source-honest prototype for testing whether a bounded deterministic loop can keep fixed structural boundaries while small shared-state modules produce different valid causal interiors under external intervention.
 
 ## Status
 
-**v0.01 proof harness. Not a game engine, movie engine, VR engine, or general simulation claim.**
+**v0.02 timed-intervention proof harness. Not a game engine, movie engine, VR engine, or general simulation claim.**
 
-The current prototype is one headless `TRAIN PLATFORM LOOP`:
+The current prototype is one headless `TRAIN PLATFORM LOOP` with:
 
 - start invariant: train approaches the station
 - hard end invariant: train eventually leaves
 - external direction: `WAIT`, `BLOCK_DOOR`, `TRIGGER_ALARM`, `TALK_TO_PASSENGER`
-- consequences are derived by deterministic modules, not declared by the actor
-- all module writes merge deterministically
-- run receipts include hashes, transitions, activated modules, contradictions, invariant results, and resource work units
-- replay reconstructs the same causal run from start state + ordered influences
-- persistent history only accepts explicitly committed converged runs
+- consequences derived by deterministic modules, not declared by the actor
+- atomic deterministic module merge from one frozen wave snapshot
+- exact run receipts with state hashes, transitions, activated modules, contradictions, invariants, and resource work units
+- timed interventions that enter before an explicit causal wave
+- replay from the same start state + same timed intervention sequence
+- explicit distinction between scheduled, applied, and never-reached future interventions
+- persistent history accepting only explicitly committed converged runs
+
+## What v0.02 adds
+
+Timing is now part of causal input.
+
+```text
+same start + BLOCK_DOOR at wave 2 -> door is open -> obstruction -> delay 1
+same start + BLOCK_DOOR at wave 4 -> door already closed -> no retroactive obstruction -> delay 0
+```
+
+The actor still injects only direction (`BLOCK_DOOR`). The causal state decides the consequence.
 
 ## Run the proof
 
@@ -23,25 +36,38 @@ Requires Python 3.11+ and no third-party packages.
 
 ```bash
 python -m unittest discover -s tests -v
+python scripts/generate_proof.py
+git diff --exit-code -- evidence/v0.02-timed-proof.json
 ```
 
-## Tiny example
+## Tiny examples
+
+Legacy pre-run direction remains supported:
 
 ```python
 from causal_loop.train_platform import build_engine, initial_state
 
-engine = build_engine()
-receipt = engine.run(initial_state(), ["BLOCK_DOOR"], commit=True)
+receipt = build_engine().run(initial_state(), ["BLOCK_DOOR"], commit=True)
+```
 
-print(receipt["status"])
-print(receipt["modulesActivated"])
-print(receipt["endStateHash"])
+Timed direction:
+
+```python
+from causal_loop.engine import TimedInfluence
+from causal_loop.train_platform import build_engine, initial_state
+
+receipt = build_engine().run(
+    initial_state(),
+    timed_influences=[TimedInfluence(2, "BLOCK_DOOR")],
+)
 ```
 
 ## Claim boundary
 
-What this repository may prove at v0.01 is intentionally narrow: the same bounded loop can deterministically replay the same ordered inputs, while different external direction can activate a different valid causal path that still converges.
+The current proof is intentionally narrow. It supports the claim that a bounded deterministic scene can replay identical timed external inputs exactly, while the same external action at different causal moments can produce different valid consequences without rewriting prior state.
 
-It does **not** yet prove large loop spaces are cheap, that automatically created loops are compelling, that arbitrary software/media can be compiled into this form, or that this architecture outperforms established engines.
+It does **not** yet prove large loop spaces are cheap, that automatically created loops are compelling, that arbitrary software/media can be compiled into this form, that arbitrary wall-clock concurrency is deterministic, or that this architecture outperforms established engines.
+
+The next planned proof is deterministic checkpoint/pause/resume.
 
 See `AGENTS.md` for collaboration, source-honesty, and one-lane-per-chat rules.
