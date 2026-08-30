@@ -22,4 +22,4 @@ jobs:
       - name: Regenerate proof artifact
         run: python scripts/generate_proof.py
       - name: Verify proof artifact is current
-        run: git diff --exit-code -- evidence/v0.01-proof.json
+        run: git diff --exit-code -- evidence/v0.02-timed-proof.json
