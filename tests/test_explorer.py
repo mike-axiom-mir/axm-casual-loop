@@ -32,19 +32,16 @@ class CausalAtlasTests(unittest.TestCase):
         self.assertEqual(atlas["deterministicMismatchCases"], [])
         self.assertTrue(all(case["deterministicRepeat"] for case in atlas["cases"]))
 
-    def test_atlas_accounts_for_every_converged_or_failed_case(self):
+    def test_expanded_space_converges_without_detected_causal_debt(self):
         atlas = self.build_atlas()
         summary = atlas["summary"]
-        self.assertEqual(summary["convergedCount"] + summary["failedCount"], 208)
-        self.assertEqual(
-            sum(summary["failuresByReason"].values()),
-            summary["failedCount"],
-        )
+        self.assertEqual(summary["convergedCount"], 208)
+        self.assertEqual(summary["failedCount"], 0)
+        self.assertEqual(summary["failuresByReason"], {})
+        self.assertEqual(summary["hardInvariantFailureCaseCount"], 0)
         self.assertEqual(summary["contradictionCaseCount"], 0)
-
-    def test_atlas_has_no_orphan_external_write_keys(self):
-        atlas = self.build_atlas()
-        self.assertEqual(atlas["summary"]["orphanExternalWriteKeys"], [])
+        self.assertEqual(summary["orphanExternalWriteKeys"], [])
+        self.assertEqual(summary["unresolvedExternalWriteKeys"], [])
 
     def test_talk_direction_is_consumed_by_a_deterministic_module(self):
         receipt = build_engine().run(
@@ -65,6 +62,45 @@ class CausalAtlasTests(unittest.TestCase):
         self.assertEqual(receipt["appliedTimedInfluences"][0]["writes"], {})
         self.assertFalse(receipt["endState"]["player.blockingDoor"])
         self.assertEqual(receipt["endState"]["train.departureDelay"], 0)
+
+    def test_two_separate_block_incidents_accumulate_two_delay_units(self):
+        receipt = build_engine().run(
+            initial_state(),
+            timed_influences=[
+                TimedInfluence(2, "BLOCK_DOOR"),
+                TimedInfluence(4, "BLOCK_DOOR"),
+            ],
+        )
+        self.assertEqual(receipt["status"], "converged")
+        self.assertEqual(receipt["endState"]["delay.block"], 2)
+        self.assertEqual(receipt["endState"]["train.departureDelay"], 2)
+        self.assertEqual(receipt["modulesActivated"].count("04-obstruction"), 2)
+
+    def test_two_separate_alarm_incidents_accumulate_four_delay_units(self):
+        receipt = build_engine().run(
+            initial_state(),
+            timed_influences=[
+                TimedInfluence(0, "TRIGGER_ALARM"),
+                TimedInfluence(2, "TRIGGER_ALARM"),
+            ],
+        )
+        self.assertEqual(receipt["status"], "converged")
+        self.assertEqual(receipt["endState"]["delay.alarm"], 4)
+        self.assertEqual(receipt["endState"]["train.departureDelay"], 4)
+        self.assertEqual(receipt["modulesActivated"].count("05-alarm-trigger"), 2)
+
+    def test_same_wave_duplicate_alarm_is_one_realized_incident(self):
+        receipt = build_engine().run(
+            initial_state(),
+            timed_influences=[
+                TimedInfluence(0, "TRIGGER_ALARM"),
+                TimedInfluence(0, "TRIGGER_ALARM"),
+            ],
+        )
+        self.assertEqual(receipt["status"], "converged")
+        self.assertEqual(receipt["endState"]["delay.alarm"], 2)
+        self.assertEqual(receipt["modulesActivated"].count("05-alarm-trigger"), 1)
+        self.assertEqual(receipt["appliedTimedInfluences"][1]["writes"], {})
 
     def test_departed_state_cannot_pass_hard_invariant_with_causal_debt(self):
         engine = build_engine()
