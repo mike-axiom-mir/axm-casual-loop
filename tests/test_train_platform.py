@@ -181,6 +181,53 @@ class TrainPlatformProofTests(unittest.TestCase):
                 initial_state(), ["BLOCK_DOOR"], timed_influences=[TimedInfluence(2, "TRIGGER_ALARM")]
             )
 
+    def test_checkpoint_resume_matches_uninterrupted_run_exactly(self):
+        engine = build_engine()
+        schedule = [TimedInfluence(2, "BLOCK_DOOR"), TimedInfluence(3, "TRIGGER_ALARM")]
+        uninterrupted = engine.run(initial_state(), timed_influences=schedule)
+        checkpoint = engine.pause(initial_state(), timed_influences=schedule, after_waves=2)
+        resumed = engine.resume(checkpoint)
+        self.assertEqual(uninterrupted["status"], "converged")
+        self.assertEqual(resumed["receiptHash"], uninterrupted["receiptHash"])
+        self.assertEqual(resumed["stateTransitions"], uninterrupted["stateTransitions"])
+        self.assertEqual(resumed["convergencePath"], uninterrupted["convergencePath"])
+        self.assertEqual(resumed["endStateHash"], uninterrupted["endStateHash"])
+
+    def test_checkpoint_boundary_does_not_consume_future_timed_action_early(self):
+        engine = build_engine()
+        schedule = [TimedInfluence(2, "BLOCK_DOOR")]
+        checkpoint = engine.pause(initial_state(), timed_influences=schedule, after_waves=2)
+        self.assertEqual(checkpoint["wavesExecuted"], 2)
+        self.assertEqual(checkpoint["appliedTimedInfluences"], [])
+        resumed = engine.resume(checkpoint)
+        self.assertEqual(resumed["endState"]["train.departureDelay"], 1)
+        self.assertEqual(len(resumed["appliedTimedInfluences"]), 1)
+        self.assertEqual(resumed["appliedTimedInfluences"][0]["atWave"], 2)
+
+    def test_same_pause_point_produces_same_checkpoint_hash(self):
+        engine = build_engine()
+        schedule = [TimedInfluence(2, "BLOCK_DOOR")]
+        a = engine.pause(initial_state(), timed_influences=schedule, after_waves=2)
+        b = engine.pause(initial_state(), timed_influences=schedule, after_waves=2)
+        self.assertEqual(a["checkpointHash"], b["checkpointHash"])
+        self.assertEqual(a["stateHash"], b["stateHash"])
+
+    def test_tampered_checkpoint_is_rejected(self):
+        engine = build_engine()
+        checkpoint = engine.pause(initial_state(), timed_influences=[TimedInfluence(2, "BLOCK_DOOR")], after_waves=2)
+        checkpoint["state"]["door.state"] = "teleported_open_elsewhere"
+        with self.assertRaises(ValueError):
+            engine.resume(checkpoint)
+
+    def test_resumed_committed_run_enters_history_once(self):
+        engine = build_engine()
+        checkpoint = engine.pause(initial_state(), timed_influences=[TimedInfluence(2, "BLOCK_DOOR")], after_waves=2)
+        resumed = engine.resume(checkpoint, commit=True)
+        history = []
+        commit_receipt_to_history(resumed, history)
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0]["runId"], resumed["runId"])
+
 
 if __name__ == "__main__":
     unittest.main()
