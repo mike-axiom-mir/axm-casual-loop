@@ -85,7 +85,7 @@ class LoopSpec:
     soft_invariants: tuple[Invariant, ...]
     intervention_handler: InterventionHandler = field(compare=False, repr=False)
     max_waves: int = 64
-    receipt_schema: str = "axm.causal-loop.run-receipt/v0.03"
+    receipt_schema: str = "axm.causal-loop.run-receipt/v0.04"
 
 
 class CausalLoopEngine:
@@ -98,9 +98,11 @@ class CausalLoopEngine:
     v0.02: timed external direction enters before an explicit causal wave.
     v0.03: a running deterministic context can be checkpointed between waves and resumed
     without re-executing the already committed prefix of that run.
+    v0.04: declared module authority scopes are enforced before any proposed write can
+    enter the deterministic merge.
     """
 
-    CHECKPOINT_SCHEMA = "axm.causal-loop.checkpoint/v0.03"
+    CHECKPOINT_SCHEMA = "axm.causal-loop.checkpoint/v0.04"
 
     def __init__(self, spec: LoopSpec, modules: Iterable[Module]):
         self.spec = spec
@@ -203,6 +205,7 @@ class CausalLoopEngine:
             "transitions": [],
             "activated": [],
             "contradictions": [],
+            "authority_violations": [],
             "convergence_path": [start_hash],
             "seen_cycle_keys": [],
             "max_active_workset": 0,
@@ -299,13 +302,32 @@ class CausalLoopEngine:
                 return
 
             proposals: list[tuple[Module, dict[str, Any]]] = []
+            wave_authority_violations: list[dict[str, Any]] = []
             for module in applicable:
                 writes = {
                     key: value
                     for key, value in dict(module.transition(snapshot)).items()
                     if snapshot.get(key) != value
                 }
+                unauthorized_keys = sorted(set(writes) - set(module.authority_scope))
+                if unauthorized_keys:
+                    wave_authority_violations.append(
+                        {
+                            "wave": waves_executed,
+                            "moduleId": module.module_id,
+                            "unauthorizedKeys": unauthorized_keys,
+                            "proposedWrites": {
+                                key: deepcopy(writes[key]) for key in unauthorized_keys
+                            },
+                        }
+                    )
                 proposals.append((module, writes))
+
+            if wave_authority_violations:
+                context["authority_violations"].extend(wave_authority_violations)
+                context["status"] = "failed"
+                context["failure_reason"] = "authority_scope_violation"
+                return
 
             merged: dict[str, Any] = {}
             writers: dict[str, list[str]] = {}
@@ -378,6 +400,7 @@ class CausalLoopEngine:
             "modulesActivated": deepcopy(context["activated"]),
             "stateTransitions": deepcopy(context["transitions"]),
             "contradictions": deepcopy(context["contradictions"]),
+            "authorityViolations": deepcopy(context["authority_violations"]),
             "convergencePath": deepcopy(context["convergence_path"]),
             "seenCycleKeys": deepcopy(context["seen_cycle_keys"]),
             "maxActiveWorkset": context["max_active_workset"],
@@ -423,6 +446,7 @@ class CausalLoopEngine:
             "transitions": data["stateTransitions"],
             "activated": data["modulesActivated"],
             "contradictions": data["contradictions"],
+            "authority_violations": data["authorityViolations"],
             "convergence_path": data["convergencePath"],
             "seen_cycle_keys": data["seenCycleKeys"],
             "max_active_workset": data["maxActiveWorkset"],
@@ -516,6 +540,7 @@ class CausalLoopEngine:
             "modulesActivated": deepcopy(context["activated"]),
             "stateTransitions": deepcopy(context["transitions"]),
             "contradictions": deepcopy(context["contradictions"]),
+            "authorityViolations": deepcopy(context["authority_violations"]),
             "convergencePath": deepcopy(context["convergence_path"]),
             "endState": deepcopy(state),
             "endStateHash": deterministic_hash(state),
@@ -531,6 +556,7 @@ class CausalLoopEngine:
                 "convergenceSteps": max(0, len(context["convergence_path"]) - 1),
                 "maxActiveWorkset": context["max_active_workset"],
                 "contradictionCount": len(context["contradictions"]),
+                "authorityViolationCount": len(context["authority_violations"]),
                 "cpuTimeNs": None,
             },
         }
@@ -554,7 +580,7 @@ class CausalLoopEngine:
             "runId", "status", "failureReason", "startStateHash",
             "orderedExternalInfluences", "timedExternalInfluences",
             "appliedTimedInfluences", "unappliedTimedInfluences",
-            "modulesActivated", "stateTransitions", "contradictions",
+            "modulesActivated", "stateTransitions", "contradictions", "authorityViolations",
             "convergencePath", "endStateHash", "invariantResults", "historyEffects",
         )
         replayed["replayMatches"] = all(replayed[key] == receipt[key] for key in comparable_keys)
