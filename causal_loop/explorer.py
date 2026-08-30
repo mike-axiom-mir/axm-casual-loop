@@ -36,8 +36,8 @@ def bounded_schedule_cases(
 
     This deliberately does not pretend to enumerate every possible world. It creates a
     bounded, reproducible set of zero-, one-, and two-action schedules so hidden timing,
-    ordering, repeated-action, dangling-direction, and convergence problems become
-    measurable.
+    ordering, repeated-action, dangling-direction, authority, and convergence problems
+    become measurable.
     """
 
     ordered_actions = tuple(dict.fromkeys(actions))
@@ -112,6 +112,7 @@ def _realized_path_payload(receipt: Mapping[str, Any]) -> dict[str, Any]:
         "modulesActivated": receipt["modulesActivated"],
         "stateTransitions": receipt["stateTransitions"],
         "contradictions": receipt["contradictions"],
+        "authorityViolations": receipt.get("authorityViolations", []),
         "endStateHash": receipt["endStateHash"],
         "invariantResults": receipt["invariantResults"],
     }
@@ -210,11 +211,13 @@ def explore_schedule_space(
                 "transitionCount": first["resourceUsage"]["stateTransitions"],
                 "moduleActivationCount": first["resourceUsage"]["moduleActivations"],
                 "contradictionCount": first["resourceUsage"]["contradictionCount"],
+                "authorityViolationCount": first["resourceUsage"].get("authorityViolationCount", 0),
                 "hardInvariantFailures": hard_failures,
                 "appliedTimedInfluences": first["appliedTimedInfluences"],
                 "unappliedTimedInfluences": first["unappliedTimedInfluences"],
                 "orphanExternalWriteKeys": orphan_keys,
                 "unresolvedExternalWrites": unresolved,
+                "authorityViolations": first.get("authorityViolations", []),
             }
         )
 
@@ -231,7 +234,7 @@ def explore_schedule_space(
         end_state_groups.setdefault(result["endStateHash"], []).append(result["caseId"])
 
     atlas = {
-        "schema": "axm.causal-loop.causal-atlas/v0.06",
+        "schema": "axm.causal-loop.causal-atlas/v0.07",
         "loopId": engine.spec.loop_id,
         "loopVersion": engine.spec.version,
         "engineSignature": engine.engine_signature,
@@ -248,6 +251,9 @@ def explore_schedule_space(
             ),
             "contradictionCaseCount": sum(
                 result["contradictionCount"] > 0 for result in results
+            ),
+            "authorityViolationCaseCount": sum(
+                result["authorityViolationCount"] > 0 for result in results
             ),
             "orphanExternalWriteKeys": sorted(orphan_write_keys),
             "unresolvedExternalWriteKeys": sorted(unresolved_write_keys),
