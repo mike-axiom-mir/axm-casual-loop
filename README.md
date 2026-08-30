@@ -4,9 +4,9 @@ A source-honest prototype for testing whether a bounded deterministic loop can k
 
 ## Status
 
-**v0.03 checkpoint/resume proof harness. Not a game engine, movie engine, VR engine, or general simulation claim.**
+**v0.04 non-authoritative receipt-observer proof harness. Not a game engine, movie engine, VR engine, or general simulation claim.**
 
-The current prototype is one headless `TRAIN PLATFORM LOOP` with:
+The current prototype is one deterministic `TRAIN PLATFORM LOOP` with:
 
 - start invariant: train approaches the station
 - hard end invariant: train eventually leaves
@@ -21,6 +21,7 @@ The current prototype is one headless `TRAIN PLATFORM LOOP` with:
 - checkpoint hash + state hash + engine-signature validation before resume
 - resume that continues the already-executed causal prefix rather than replaying it
 - persistent history accepting only explicitly committed converged runs
+- a local visual observer that reads receipts but has no causal authority
 
 ## v0.02: timing becomes causal input
 
@@ -33,7 +34,7 @@ The actor still injects only direction (`BLOCK_DOOR`). Canonical state decides t
 
 ## v0.03: pause and resume
 
-A run can now stop exactly between deterministic causal waves:
+A run can stop exactly between deterministic causal waves:
 
 ```text
 start
@@ -46,15 +47,24 @@ start
  -> convergence
 ```
 
-The proof requires the resumed run to equal an uninterrupted run for:
+The proof requires the resumed run to equal an uninterrupted run for run ID, receipt hash, end-state hash, ordered transitions, and convergence path. Checkpoint state is hash-protected and tampering is rejected.
 
-- run ID
-- final receipt hash
-- end-state hash
-- ordered state transitions
-- convergence path
+## v0.04: observer glass, not a second engine
 
-Checkpoint state is hash-protected. Altering checkpoint state without recomputing a valid checkpoint is rejected.
+`observer/index.html` is a self-contained local viewer. It accepts a causal-loop run receipt and lets a human play, pause, scrub, and inspect the recorded scene.
+
+The observer intentionally **cannot**:
+
+- execute causal modules
+- call the intervention handler
+- decide consequences
+- resolve contradictions
+- write canonical state
+- reach the internet
+
+Python-side `project_receipt()` reconstructs visual frames strictly from writes already present in the authoritative receipt. Module writes from the same causal wave are grouped atomically so the observer does not invent intermediate states that never existed. Hash inconsistencies are rejected.
+
+This is currently a **receipt observer**, not a claim of a live renderer attached to a running world.
 
 ## Run the proof
 
@@ -66,9 +76,31 @@ python scripts/generate_proof.py
 git diff --exit-code -- evidence/v0.03-checkpoint-proof.json
 ```
 
-Current local suite: **25 tests**.
+The suite now contains **30 tests** including observer-boundary tests.
 
-## Tiny example
+## Open the visual observer
+
+Create a deterministic demo receipt:
+
+```bash
+python scripts/export_demo_receipt.py
+```
+
+Then open:
+
+```text
+observer/index.html
+```
+
+Use **Load receipt JSON** and choose:
+
+```text
+observer/demo-receipt.json
+```
+
+The demo receipt is generated locally and ignored by Git so it cannot accidentally become canonical evidence.
+
+## Tiny checkpoint example
 
 ```python
 from causal_loop.engine import TimedInfluence
@@ -88,10 +120,10 @@ receipt = engine.resume(checkpoint)
 
 ## Claim boundary
 
-The current proof is intentionally narrow. It supports the claim that a bounded deterministic scene can replay identical timed external input, pause at a deterministic causal boundary, and continue from a hash-validated checkpoint to the same canonical result as uninterrupted execution.
+The current proof is intentionally narrow. It supports the claim that a bounded deterministic scene can replay identical timed external input, pause/resume at a deterministic causal boundary, and project the resulting receipt into a non-authoritative visual timeline without letting presentation decide canonical truth.
 
-It does **not** yet prove large loop spaces are cheap, arbitrary wall-clock concurrency is deterministic, automatically created loops are compelling, arbitrary software/media can be compiled into this form, or that this architecture outperforms established engines.
+It does **not** yet prove large loop spaces are cheap, arbitrary wall-clock concurrency is deterministic, automatically created loops are compelling, arbitrary software/media can be compiled into this form, a live renderer is deterministic, or that this architecture outperforms established engines.
 
-The next sensible proof is a tiny visual observer over the authoritative causal state, followed by a larger scene only after the observer remains non-authoritative.
+The next useful step is to verify v0.04 remotely, then increase causal richness slightly without jumping to a giant world.
 
 See `AGENTS.md` for collaboration, source-honesty, and one-lane-per-chat rules.
