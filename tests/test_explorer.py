@@ -1,5 +1,6 @@
 import unittest
 
+from causal_loop.engine import TimedInfluence
 from causal_loop.explorer import bounded_schedule_cases, explore_schedule_space
 from causal_loop.train_platform import build_engine, initial_state
 
@@ -32,22 +33,45 @@ class CausalAtlasTests(unittest.TestCase):
         self.assertEqual(atlas["summary"]["failedCount"], 0)
         self.assertEqual(atlas["summary"]["convergedCount"], 145)
 
-    def test_atlas_exposes_current_orphan_talk_direction(self):
+    def test_atlas_has_no_orphan_external_write_keys_after_repair(self):
         atlas = self.build_atlas()
-        self.assertIn("player.talkingToPassenger", atlas["summary"]["orphanExternalWriteKeys"])
-        affected = [
-            case
-            for case in atlas["cases"]
-            if "player.talkingToPassenger" in case["orphanExternalWriteKeys"]
-        ]
-        self.assertTrue(affected)
-        self.assertTrue(any("TALK_TO_PASSENGER" in case["caseId"] for case in affected))
+        self.assertEqual(atlas["summary"]["orphanExternalWriteKeys"], [])
 
-    def test_atlas_exposes_direction_that_can_survive_to_convergence(self):
+    def test_atlas_has_no_unresolved_external_write_keys_after_repair(self):
         atlas = self.build_atlas()
-        keys = atlas["summary"]["unresolvedExternalWriteKeys"]
-        self.assertIn("player.talkingToPassenger", keys)
-        self.assertIn("player.blockingDoor", keys)
+        self.assertEqual(atlas["summary"]["unresolvedExternalWriteKeys"], [])
+
+    def test_talk_direction_is_consumed_by_a_deterministic_module(self):
+        receipt = build_engine().run(
+            initial_state(),
+            timed_influences=[TimedInfluence(2, "TALK_TO_PASSENGER")],
+        )
+        self.assertEqual(receipt["status"], "converged")
+        self.assertIn("13-passenger-conversation", receipt["modulesActivated"])
+        self.assertTrue(receipt["endState"]["passenger.talkedTo"])
+        self.assertFalse(receipt["endState"]["player.talkingToPassenger"])
+
+    def test_late_block_is_a_noop_not_sticky_impossible_state(self):
+        receipt = build_engine().run(
+            initial_state(),
+            timed_influences=[TimedInfluence(4, "BLOCK_DOOR")],
+        )
+        self.assertEqual(receipt["status"], "converged")
+        self.assertEqual(receipt["appliedTimedInfluences"][0]["writes"], {})
+        self.assertFalse(receipt["endState"]["player.blockingDoor"])
+        self.assertEqual(receipt["endState"]["train.departureDelay"], 0)
+
+    def test_departed_state_cannot_pass_hard_invariant_with_causal_debt(self):
+        engine = build_engine()
+        state = initial_state()
+        state["train.status"] = "departed"
+        state["player.triggerAlarm"] = True
+        debt_guard = next(
+            invariant
+            for invariant in engine.spec.hard_invariants
+            if invariant.invariant_id == "departure_has_no_causal_debt"
+        )
+        self.assertFalse(debt_guard.evaluate(state))
 
     def test_same_atlas_input_produces_same_atlas_hash(self):
         cases = bounded_schedule_cases(ACTIONS, WAVES)
