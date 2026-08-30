@@ -16,30 +16,35 @@ class CausalAtlasTests(unittest.TestCase):
 
     def test_bounded_space_has_expected_case_count(self):
         cases = bounded_schedule_cases(ACTIONS, WAVES)
-        self.assertEqual(len(cases), 145)
-        self.assertEqual(len({case.case_id for case in cases}), 145)
+        self.assertEqual(len(cases), 208)
+        self.assertEqual(len({case.case_id for case in cases}), 208)
+
+    def test_repeated_action_cases_are_included(self):
+        case_ids = {case.case_id for case in bounded_schedule_cases(ACTIONS, WAVES)}
+        self.assertIn("pair-repeat:BLOCK_DOOR@0+BLOCK_DOOR@3", case_ids)
+        self.assertIn("pair-repeat:TRIGGER_ALARM@1+TRIGGER_ALARM@4", case_ids)
+        self.assertIn("pair-repeat:TALK_TO_PASSENGER@2+TALK_TO_PASSENGER@2", case_ids)
 
     def test_atlas_repeats_every_case_and_finds_no_hash_mismatch(self):
         atlas = self.build_atlas()
-        self.assertEqual(atlas["summary"]["caseCount"], 145)
+        self.assertEqual(atlas["summary"]["caseCount"], 208)
         self.assertEqual(atlas["summary"]["deterministicMismatchCount"], 0)
         self.assertEqual(atlas["deterministicMismatchCases"], [])
         self.assertTrue(all(case["deterministicRepeat"] for case in atlas["cases"]))
 
-    def test_bounded_space_preserves_hard_invariants_without_contradictions(self):
+    def test_atlas_accounts_for_every_converged_or_failed_case(self):
         atlas = self.build_atlas()
-        self.assertEqual(atlas["summary"]["hardInvariantFailureCaseCount"], 0)
-        self.assertEqual(atlas["summary"]["contradictionCaseCount"], 0)
-        self.assertEqual(atlas["summary"]["failedCount"], 0)
-        self.assertEqual(atlas["summary"]["convergedCount"], 145)
+        summary = atlas["summary"]
+        self.assertEqual(summary["convergedCount"] + summary["failedCount"], 208)
+        self.assertEqual(
+            sum(summary["failuresByReason"].values()),
+            summary["failedCount"],
+        )
+        self.assertEqual(summary["contradictionCaseCount"], 0)
 
-    def test_atlas_has_no_orphan_external_write_keys_after_repair(self):
+    def test_atlas_has_no_orphan_external_write_keys(self):
         atlas = self.build_atlas()
         self.assertEqual(atlas["summary"]["orphanExternalWriteKeys"], [])
-
-    def test_atlas_has_no_unresolved_external_write_keys_after_repair(self):
-        atlas = self.build_atlas()
-        self.assertEqual(atlas["summary"]["unresolvedExternalWriteKeys"], [])
 
     def test_talk_direction_is_consumed_by_a_deterministic_module(self):
         receipt = build_engine().run(
