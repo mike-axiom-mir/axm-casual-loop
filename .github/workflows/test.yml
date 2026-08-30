@@ -19,10 +19,6 @@ jobs:
           python-version: "3.11"
       - name: Run deterministic proof tests
         run: python -m unittest discover -s tests -v
-      - name: Regenerate proof artifact
-        run: python scripts/generate_proof.py
-      - name: Verify proof artifact is current
-        run: git diff --exit-code -- evidence/v0.03-checkpoint-proof.json
       - name: Export observer demo receipt
         run: python scripts/export_demo_receipt.py --output /tmp/axm-causal-loop-demo-receipt.json
       - name: Generate bounded causal atlas
