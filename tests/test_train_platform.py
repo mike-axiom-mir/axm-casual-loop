@@ -153,8 +153,11 @@ class TrainPlatformProofTests(unittest.TestCase):
         self.assertNotIn("04-obstruction", receipt["modulesActivated"])
         self.assertEqual(receipt["endState"]["delay.block"], 0)
         self.assertEqual(receipt["endState"]["train.departureDelay"], 0)
-        external = next(t for t in receipt["stateTransitions"] if t["kind"] == "external")
-        self.assertEqual(external["wave"], 4)
+        self.assertEqual(receipt["appliedTimedInfluences"][0]["atWave"], 4)
+        self.assertEqual(receipt["appliedTimedInfluences"][0]["action"], "BLOCK_DOOR")
+        self.assertEqual(receipt["appliedTimedInfluences"][0]["writes"], {})
+        self.assertFalse(any(t["kind"] == "external" for t in receipt["stateTransitions"]))
+        self.assertFalse(receipt["endState"]["player.blockingDoor"])
 
     def test_future_intervention_is_visible_if_loop_converges_before_it(self):
         receipt = build_engine().run(initial_state(), timed_influences=[TimedInfluence(9, "TRIGGER_ALARM")])
