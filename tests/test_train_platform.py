@@ -1,6 +1,13 @@
 import unittest
 
-from causal_loop.engine import CausalLoopEngine, Invariant, LoopSpec, Module, commit_receipt_to_history
+from causal_loop.engine import (
+    CausalLoopEngine,
+    Invariant,
+    LoopSpec,
+    Module,
+    TimedInfluence,
+    commit_receipt_to_history,
+)
 from causal_loop.train_platform import build_engine, initial_state, intervention_handler
 
 
@@ -61,22 +68,16 @@ class TrainPlatformProofTests(unittest.TestCase):
 
     def test_causal_cycle_is_detected_and_bounded(self):
         oscillator = Module(
-            "oscillator",
-            "0.01",
-            ("bit",),
-            lambda _s: True,
-            lambda s: {"bit": 0 if s["bit"] else 1},
-            authority_scope=("bit",),
+            "oscillator", "0.01", ("bit",), lambda _s: True,
+            lambda s: {"bit": 0 if s["bit"] else 1}, authority_scope=("bit",),
         )
         spec = LoopSpec(
             loop_id="test.oscillator/v0.01",
-            version="0.01",
+            version="0.02",
             start_invariant=Invariant("start", lambda s: s["bit"] in {0, 1}, "start"),
             end_invariant=Invariant("never", lambda _s: False, "hard_end"),
-            hard_invariants=(),
-            soft_invariants=(),
-            intervention_handler=lambda _action, _state: {},
-            max_waves=10,
+            hard_invariants=(), soft_invariants=(),
+            intervention_handler=lambda _action, _state: {}, max_waves=10,
         )
         receipt = CausalLoopEngine(spec, [oscillator]).run({"bit": 0})
         self.assertEqual(receipt["status"], "failed")
@@ -103,8 +104,7 @@ class TrainPlatformProofTests(unittest.TestCase):
         committed = engine.run(initial_state(), ["BLOCK_DOOR"], commit=True)
         commit_receipt_to_history(committed, history)
         self.assertEqual(len(history), 1)
-        reset_state = initial_state()
-        self.assertEqual(reset_state["train.status"], "approaching")
+        self.assertEqual(initial_state()["train.status"], "approaching")
         self.assertEqual(history[0]["runId"], committed["runId"])
 
     def test_uncommitted_event_cannot_enter_history(self):
@@ -125,6 +125,61 @@ class TrainPlatformProofTests(unittest.TestCase):
         self.assertNotIn("train.departureDelay", writes)
         receipt = build_engine().run(initial_state(), ["BLOCK_DOOR"])
         self.assertGreater(receipt["endState"]["train.departureDelay"], 0)
+
+    def test_same_timed_intervention_sequence_replays_exactly(self):
+        engine = build_engine()
+        schedule = [TimedInfluence(2, "BLOCK_DOOR"), TimedInfluence(3, "TRIGGER_ALARM")]
+        first = engine.run(initial_state(), timed_influences=schedule)
+        second = engine.run(initial_state(), timed_influences=schedule)
+        replay = engine.replay(first)
+        self.assertEqual(first["status"], "converged")
+        self.assertEqual(first["receiptHash"], second["receiptHash"])
+        self.assertEqual(first["stateTransitions"], second["stateTransitions"])
+        self.assertTrue(replay["replayMatches"])
+
+    def test_same_action_at_different_causal_moment_changes_valid_result(self):
+        engine = build_engine()
+        while_open = engine.run(initial_state(), timed_influences=[TimedInfluence(2, "BLOCK_DOOR")])
+        after_close = engine.run(initial_state(), timed_influences=[TimedInfluence(4, "BLOCK_DOOR")])
+        self.assertEqual(while_open["status"], "converged")
+        self.assertEqual(after_close["status"], "converged")
+        self.assertEqual(while_open["endState"]["train.departureDelay"], 1)
+        self.assertEqual(after_close["endState"]["train.departureDelay"], 0)
+        self.assertNotEqual(while_open["endStateHash"], after_close["endStateHash"])
+
+    def test_timed_action_cannot_rewrite_past_closed_door(self):
+        receipt = build_engine().run(initial_state(), timed_influences=[TimedInfluence(4, "BLOCK_DOOR")])
+        self.assertEqual(receipt["status"], "converged")
+        self.assertNotIn("04-obstruction", receipt["modulesActivated"])
+        self.assertEqual(receipt["endState"]["delay.block"], 0)
+        self.assertEqual(receipt["endState"]["train.departureDelay"], 0)
+        external = next(t for t in receipt["stateTransitions"] if t["kind"] == "external")
+        self.assertEqual(external["wave"], 4)
+
+    def test_future_intervention_is_visible_if_loop_converges_before_it(self):
+        receipt = build_engine().run(initial_state(), timed_influences=[TimedInfluence(9, "TRIGGER_ALARM")])
+        self.assertEqual(receipt["status"], "converged")
+        self.assertEqual(receipt["appliedTimedInfluences"], [])
+        self.assertEqual(receipt["unappliedTimedInfluences"][0]["atWave"], 9)
+        self.assertEqual(receipt["endState"]["train.departureDelay"], 0)
+
+    def test_timed_input_order_at_same_wave_is_part_of_receipt(self):
+        receipt = build_engine().run(
+            initial_state(),
+            timed_influences=[TimedInfluence(2, "BLOCK_DOOR"), TimedInfluence(2, "TRIGGER_ALARM")],
+        )
+        self.assertEqual(receipt["status"], "converged")
+        self.assertEqual(
+            [(i["atWave"], i["sequence"], i["action"]) for i in receipt["timedExternalInfluences"]],
+            [(2, 0, "BLOCK_DOOR"), (2, 1, "TRIGGER_ALARM")],
+        )
+        self.assertEqual(receipt["endState"]["train.departureDelay"], 3)
+
+    def test_legacy_and_timed_inputs_cannot_be_mixed_ambiguously(self):
+        with self.assertRaises(ValueError):
+            build_engine().run(
+                initial_state(), ["BLOCK_DOOR"], timed_influences=[TimedInfluence(2, "TRIGGER_ALARM")]
+            )
 
 
 if __name__ == "__main__":
