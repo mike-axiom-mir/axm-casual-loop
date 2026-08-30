@@ -1,0 +1,26 @@
+{
+  "schema": "axm.causal-loop.authority-enforcement/v0.07",
+  "sourceHead": "49fafca4104c7848fbb60c8203a3975df20188f7",
+  "workflowRunId": 33333502390,
+  "testCount": 44,
+  "atlasHash": "4e0f475ce9233a7ae9d6210ff17579bfa9181b1069b2514a380dea14216a7c22",
+  "atlasSummary": {
+    "caseCount": 208,
+    "convergedCount": 208,
+    "failedCount": 0,
+    "deterministicMismatchCount": 0,
+    "hardInvariantFailureCaseCount": 0,
+    "contradictionCaseCount": 0,
+    "authorityViolationCaseCount": 0,
+    "orphanExternalWriteKeys": [],
+    "unresolvedExternalWriteKeys": []
+  },
+  "directAuthorityTests": [
+    "A module that proposes a write outside its declared authorityScope fails with authority_scope_violation.",
+    "The violating wave is rejected atomically before either authorized or unauthorized writes enter canonical state.",
+    "The receipt identifies module, wave, unauthorized key, and rejected proposed write.",
+    "The same violating run produces the same deterministic failure receipt.",
+    "A module writing only inside its declared authorityScope can converge normally."
+  ],
+  "claimBoundary": "This proves enforcement for proposed module writes in the current deterministic executor. It does not establish a general security sandbox or process isolation boundary."
+}
