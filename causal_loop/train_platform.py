@@ -116,13 +116,13 @@ def _modules() -> list[Module]:
             "09-guard-investigate",
             "0.01",
             ("platform.obstructed", "alarm.active", "guard.state", "flags.guardResolved"),
-            lambda s: (s["platform.obstructed"] or s["alarm.active"]) and not s["flags.guardResolved"],
-            lambda _s: {
+            lambda s: s["platform.obstructed"] or s["alarm.active"],
+            lambda s: {
                 "guard.state": "resolved_incident",
-                "platform.obstructed": False,
-                "alarm.active": False,
-                "player.blockingDoor": False,
-                "player.triggerAlarm": False,
+                "platform.obstructed": False if s["platform.obstructed"] else s["platform.obstructed"],
+                "alarm.active": False if s["alarm.active"] else s["alarm.active"],
+                "player.blockingDoor": False if s["platform.obstructed"] else s["player.blockingDoor"],
+                "player.triggerAlarm": False if s["alarm.active"] else s["player.triggerAlarm"],
                 "flags.guardResolved": True,
             },
             authority_scope=(
