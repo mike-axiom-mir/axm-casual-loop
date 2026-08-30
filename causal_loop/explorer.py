@@ -32,13 +32,7 @@ def bounded_schedule_cases(
     include_same_wave_reverse_order: bool = True,
     include_repeated_actions: bool = True,
 ) -> list[ExplorationCase]:
-    """Generate a small deterministic schedule space for architecture probing.
-
-    This deliberately does not pretend to enumerate every possible world. It creates a
-    bounded, reproducible set of zero-, one-, and two-action schedules so hidden timing,
-    ordering, repeated-action, dangling-direction, authority, and convergence problems
-    become measurable.
-    """
+    """Generate a small deterministic schedule space for architecture probing."""
 
     ordered_actions = tuple(dict.fromkeys(actions))
     ordered_waves = tuple(sorted(set(waves)))
@@ -113,19 +107,13 @@ def _realized_path_payload(receipt: Mapping[str, Any]) -> dict[str, Any]:
         "stateTransitions": receipt["stateTransitions"],
         "contradictions": receipt["contradictions"],
         "authorityViolations": receipt.get("authorityViolations", []),
+        "readViolations": receipt.get("readViolations", []),
         "endStateHash": receipt["endStateHash"],
         "invariantResults": receipt["invariantResults"],
     }
 
 
 def _unresolved_external_writes(receipt: Mapping[str, Any]) -> list[dict[str, Any]]:
-    """Report external writes that survive to the endpoint without a later overwrite.
-
-    This is diagnostic, not automatically an error: some architectures intentionally allow
-    persistent external state. For the train proof it is useful for spotting transient
-    direction flags that accidentally remain true after convergence or failure.
-    """
-
     transitions = list(receipt["stateTransitions"])
     unresolved: list[dict[str, Any]] = []
     for index, transition in enumerate(transitions):
@@ -190,9 +178,7 @@ def explore_schedule_space(
         orphan_write_keys.update(orphan_keys)
 
         unresolved = _unresolved_external_writes(first)
-        unresolved_keys = sorted({item["key"] for item in unresolved})
-        unresolved_write_keys.update(unresolved_keys)
-
+        unresolved_write_keys.update(item["key"] for item in unresolved)
         hard_failures = sorted(
             result["id"]
             for result in first["invariantResults"]
@@ -212,12 +198,14 @@ def explore_schedule_space(
                 "moduleActivationCount": first["resourceUsage"]["moduleActivations"],
                 "contradictionCount": first["resourceUsage"]["contradictionCount"],
                 "authorityViolationCount": first["resourceUsage"].get("authorityViolationCount", 0),
+                "readViolationCount": first["resourceUsage"].get("readViolationCount", 0),
                 "hardInvariantFailures": hard_failures,
                 "appliedTimedInfluences": first["appliedTimedInfluences"],
                 "unappliedTimedInfluences": first["unappliedTimedInfluences"],
                 "orphanExternalWriteKeys": orphan_keys,
                 "unresolvedExternalWrites": unresolved,
                 "authorityViolations": first.get("authorityViolations", []),
+                "readViolations": first.get("readViolations", []),
             }
         )
 
@@ -234,7 +222,7 @@ def explore_schedule_space(
         end_state_groups.setdefault(result["endStateHash"], []).append(result["caseId"])
 
     atlas = {
-        "schema": "axm.causal-loop.causal-atlas/v0.07",
+        "schema": "axm.causal-loop.causal-atlas/v0.08",
         "loopId": engine.spec.loop_id,
         "loopVersion": engine.spec.version,
         "engineSignature": engine.engine_signature,
@@ -254,6 +242,9 @@ def explore_schedule_space(
             ),
             "authorityViolationCaseCount": sum(
                 result["authorityViolationCount"] > 0 for result in results
+            ),
+            "readViolationCaseCount": sum(
+                result["readViolationCount"] > 0 for result in results
             ),
             "orphanExternalWriteKeys": sorted(orphan_write_keys),
             "unresolvedExternalWriteKeys": sorted(unresolved_write_keys),
