@@ -21,6 +21,23 @@ def deterministic_hash(value: Any) -> str:
 
 
 @dataclass(frozen=True)
+class TimedInfluence:
+    """One external direction scheduled before a deterministic causal wave."""
+
+    at_wave: int
+    action: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.at_wave, int) or isinstance(self.at_wave, bool) or self.at_wave < 0:
+            raise ValueError("at_wave must be a non-negative integer")
+        if not isinstance(self.action, str) or not self.action:
+            raise ValueError("action must be a non-empty string")
+
+    def contract(self, sequence: int) -> dict[str, Any]:
+        return {"atWave": self.at_wave, "sequence": sequence, "action": self.action}
+
+
+@dataclass(frozen=True)
 class Module:
     module_id: str
     version: str
@@ -68,15 +85,19 @@ class LoopSpec:
     soft_invariants: tuple[Invariant, ...]
     intervention_handler: InterventionHandler = field(compare=False, repr=False)
     max_waves: int = 64
-    receipt_schema: str = "axm.causal-loop.run-receipt/v0.01"
+    receipt_schema: str = "axm.causal-loop.run-receipt/v0.02"
 
 
 class CausalLoopEngine:
     """Deterministic, headless causal-loop executor.
 
-    Modules are evaluated against one immutable wave snapshot. Their proposed writes are
-    merged atomically. Registry insertion order never decides the canonical result because
-    applicable modules are sorted by module_id before merge and receipt generation.
+    Modules in a wave read one immutable state snapshot and propose writes. Applicable
+    modules are sorted by module_id and their writes are merged atomically, so registry or
+    completion order cannot silently decide canonical truth.
+
+    v0.02 adds timed external direction. A TimedInfluence enters immediately before its
+    declared causal wave. Timing is therefore part of the deterministic input contract and
+    of the run identity/replay evidence.
     """
 
     def __init__(self, spec: LoopSpec, modules: Iterable[Module]):
@@ -86,16 +107,20 @@ class CausalLoopEngine:
         if len(ids) != len(set(ids)):
             raise ValueError("module_id values must be unique")
         if not all(module.deterministic for module in self.modules):
-            raise ValueError("v0.01 only accepts deterministic modules")
+            raise ValueError("causal loop only accepts deterministic modules")
 
     def run(
         self,
         initial_state: Mapping[str, Any],
         influences: Sequence[str] = (),
         *,
+        timed_influences: Sequence[TimedInfluence | Mapping[str, Any]] = (),
         commit: bool = False,
         max_waves: int | None = None,
     ) -> dict[str, Any]:
+        if influences and timed_influences:
+            raise ValueError("use legacy influences or timed_influences, not both")
+
         state: State = deepcopy(dict(initial_state))
         pristine_start = deepcopy(state)
         start_hash = deterministic_hash(pristine_start)
@@ -103,13 +128,14 @@ class CausalLoopEngine:
         if limit < 0:
             raise ValueError("max_waves must be >= 0")
 
-        ordered_influences = list(influences)
+        schedule = self._normalize_schedule(influences, timed_influences)
+        ordered_influences = [item["action"] for item in schedule]
         run_id = deterministic_hash(
             {
                 "loopId": self.spec.loop_id,
                 "version": self.spec.version,
                 "startStateHash": start_hash,
-                "orderedExternalInfluences": ordered_influences,
+                "timedExternalInfluences": schedule,
             }
         )[:24]
 
@@ -117,6 +143,7 @@ class CausalLoopEngine:
         activated: list[str] = []
         contradictions: list[dict[str, Any]] = []
         convergence_path: list[str] = [start_hash]
+        applied_schedule: list[dict[str, Any]] = []
         max_active_workset = 0
 
         start_ok = self.spec.start_invariant.evaluate(state)
@@ -126,6 +153,8 @@ class CausalLoopEngine:
                 pristine_start=pristine_start,
                 state=state,
                 influences=ordered_influences,
+                schedule=schedule,
+                applied_schedule=applied_schedule,
                 transitions=transitions,
                 activated=activated,
                 contradictions=contradictions,
@@ -134,40 +163,72 @@ class CausalLoopEngine:
                 failure_reason="start_invariant_failed",
                 commit=False,
                 max_active_workset=max_active_workset,
+                waves_executed=0,
             )
 
-        for index, action in enumerate(ordered_influences):
-            proposed = dict(self.spec.intervention_handler(action, deepcopy(state)))
-            changed = {key: value for key, value in proposed.items() if state.get(key) != value}
-            if changed:
-                state.update(changed)
-                transitions.append(
-                    {
-                        "kind": "external",
-                        "index": index,
-                        "source": action,
-                        "writes": changed,
-                        "stateHash": deterministic_hash(state),
-                    }
-                )
-                convergence_path.append(deterministic_hash(state))
-
-        seen_wave_hashes: set[str] = set()
+        seen_cycle_keys: set[str] = set()
         failure_reason: str | None = None
         status = "running"
         waves_executed = 0
 
-        while waves_executed < limit:
+        while True:
             if self.spec.end_invariant.evaluate(state):
                 status = "converged"
                 break
 
-            wave_hash = deterministic_hash(state)
-            if wave_hash in seen_wave_hashes:
+            due = [item for item in schedule if item["atWave"] == waves_executed]
+            for item in due:
+                proposed = dict(self.spec.intervention_handler(item["action"], deepcopy(state)))
+                changed = {key: value for key, value in proposed.items() if state.get(key) != value}
+                applied = {**item, "writes": changed}
+                applied_schedule.append(applied)
+                if changed:
+                    state.update(changed)
+                    state_hash = deterministic_hash(state)
+                    transitions.append(
+                        {
+                            "kind": "external",
+                            "wave": waves_executed,
+                            "sequence": item["sequence"],
+                            "source": item["action"],
+                            "writes": changed,
+                            "stateHash": state_hash,
+                        }
+                    )
+                    convergence_path.append(state_hash)
+
+                failed_hard = self._failed_hard_invariants(state)
+                if failed_hard:
+                    status = "failed"
+                    failure_reason = "hard_invariant_failed:" + ",".join(sorted(failed_hard))
+                    break
+            if status == "failed":
+                break
+
+            if self.spec.end_invariant.evaluate(state):
+                status = "converged"
+                break
+
+            if waves_executed >= limit:
+                status = "failed"
+                failure_reason = "event_budget_exhausted"
+                break
+
+            remaining = [
+                {
+                    "afterWaves": item["atWave"] - waves_executed,
+                    "sequence": item["sequence"],
+                    "action": item["action"],
+                }
+                for item in schedule
+                if item["atWave"] > waves_executed
+            ]
+            cycle_key = deterministic_hash({"state": state, "remainingTimedInfluences": remaining})
+            if cycle_key in seen_cycle_keys:
                 status = "failed"
                 failure_reason = "causal_cycle_detected"
                 break
-            seen_wave_hashes.add(wave_hash)
+            seen_cycle_keys.add(cycle_key)
 
             snapshot = deepcopy(state)
             applicable = sorted(
@@ -191,22 +252,24 @@ class CausalLoopEngine:
 
             merged: dict[str, Any] = {}
             writers: dict[str, list[str]] = {}
+            wave_contradictions: list[dict[str, Any]] = []
             for module, writes in proposals:
                 for key, value in writes.items():
                     writers.setdefault(key, []).append(module.module_id)
                     if key in merged and merged[key] != value:
-                        contradictions.append(
+                        wave_contradictions.append(
                             {
                                 "wave": waves_executed,
                                 "key": key,
-                                "writers": writers[key],
+                                "writers": list(writers[key]),
                                 "values": [merged[key], value],
                             }
                         )
                     else:
                         merged[key] = value
 
-            if contradictions:
+            contradictions.extend(wave_contradictions)
+            if wave_contradictions:
                 status = "failed"
                 failure_reason = "contradictory_writes"
                 break
@@ -228,30 +291,19 @@ class CausalLoopEngine:
                     )
 
             state.update(merged)
-            waves_executed += 1
             state_hash = deterministic_hash(state)
             for item in reversed(transitions):
-                if item.get("kind") != "module" or item.get("wave") != waves_executed - 1:
+                if item.get("kind") != "module" or item.get("wave") != waves_executed:
                     break
                 item["stateHash"] = state_hash
             convergence_path.append(state_hash)
+            waves_executed += 1
 
-            failed_hard = [
-                invariant.invariant_id
-                for invariant in self.spec.hard_invariants
-                if not invariant.evaluate(state)
-            ]
+            failed_hard = self._failed_hard_invariants(state)
             if failed_hard:
                 status = "failed"
                 failure_reason = "hard_invariant_failed:" + ",".join(sorted(failed_hard))
                 break
-
-        if status == "running":
-            if self.spec.end_invariant.evaluate(state):
-                status = "converged"
-            else:
-                status = "failed"
-                failure_reason = "event_budget_exhausted"
 
         committed = bool(commit and status == "converged")
         return self._receipt(
@@ -259,6 +311,8 @@ class CausalLoopEngine:
             pristine_start=pristine_start,
             state=state,
             influences=ordered_influences,
+            schedule=schedule,
+            applied_schedule=applied_schedule,
             transitions=transitions,
             activated=activated,
             contradictions=contradictions,
@@ -267,7 +321,36 @@ class CausalLoopEngine:
             failure_reason=failure_reason,
             commit=committed,
             max_active_workset=max_active_workset,
+            waves_executed=waves_executed,
         )
+
+    @staticmethod
+    def _normalize_schedule(
+        influences: Sequence[str],
+        timed_influences: Sequence[TimedInfluence | Mapping[str, Any]],
+    ) -> list[dict[str, Any]]:
+        raw: list[TimedInfluence] = []
+        if timed_influences:
+            for item in timed_influences:
+                if isinstance(item, TimedInfluence):
+                    raw.append(item)
+                    continue
+                try:
+                    raw.append(TimedInfluence(at_wave=item["atWave"], action=item["action"]))
+                except (KeyError, TypeError) as exc:
+                    raise ValueError("timed influence requires atWave and action") from exc
+        else:
+            raw = [TimedInfluence(at_wave=0, action=action) for action in influences]
+
+        schedule = [item.contract(sequence=index) for index, item in enumerate(raw)]
+        return sorted(schedule, key=lambda item: (item["atWave"], item["sequence"]))
+
+    def _failed_hard_invariants(self, state: Mapping[str, Any]) -> list[str]:
+        return [
+            invariant.invariant_id
+            for invariant in self.spec.hard_invariants
+            if not invariant.evaluate(state)
+        ]
 
     def _receipt(
         self,
@@ -276,6 +359,8 @@ class CausalLoopEngine:
         pristine_start: State,
         state: State,
         influences: list[str],
+        schedule: list[dict[str, Any]],
+        applied_schedule: list[dict[str, Any]],
         transitions: list[dict[str, Any]],
         activated: list[str],
         contradictions: list[dict[str, Any]],
@@ -284,6 +369,7 @@ class CausalLoopEngine:
         failure_reason: str | None,
         commit: bool,
         max_active_workset: int,
+        waves_executed: int,
     ) -> dict[str, Any]:
         invariant_results = [
             {
@@ -325,6 +411,8 @@ class CausalLoopEngine:
             if commit
             else []
         )
+        applied_sequences = {item["sequence"] for item in applied_schedule}
+        unapplied = [item for item in schedule if item["sequence"] not in applied_sequences]
         receipt = {
             "schema": self.spec.receipt_schema,
             "runId": run_id,
@@ -337,6 +425,9 @@ class CausalLoopEngine:
             "startState": pristine_start,
             "startStateHash": deterministic_hash(pristine_start),
             "orderedExternalInfluences": influences,
+            "timedExternalInfluences": schedule,
+            "appliedTimedInfluences": applied_schedule,
+            "unappliedTimedInfluences": unapplied,
             "modulesActivated": activated,
             "stateTransitions": transitions,
             "contradictions": contradictions,
@@ -349,8 +440,9 @@ class CausalLoopEngine:
                 "modulesAvailable": len(self.modules),
                 "moduleActivations": len(activated),
                 "stateTransitions": len(transitions),
-                "causalDepth": len({t.get("wave") for t in transitions if "wave" in t}),
-                "externalInfluences": len(influences),
+                "causalDepth": waves_executed,
+                "externalInfluences": len(applied_schedule),
+                "scheduledExternalInfluences": len(schedule),
                 "convergenceSteps": max(0, len(convergence_path) - 1),
                 "maxActiveWorkset": max_active_workset,
                 "contradictionCount": len(contradictions),
@@ -361,17 +453,27 @@ class CausalLoopEngine:
         return receipt
 
     def replay(self, receipt: Mapping[str, Any]) -> dict[str, Any]:
-        replayed = self.run(
-            receipt["startState"],
-            receipt["orderedExternalInfluences"],
-            commit=bool(receipt.get("committed", False)),
-        )
+        if "timedExternalInfluences" in receipt:
+            replayed = self.run(
+                receipt["startState"],
+                timed_influences=receipt["timedExternalInfluences"],
+                commit=bool(receipt.get("committed", False)),
+            )
+        else:
+            replayed = self.run(
+                receipt["startState"],
+                receipt["orderedExternalInfluences"],
+                commit=bool(receipt.get("committed", False)),
+            )
         comparable_keys = (
             "runId",
             "status",
             "failureReason",
             "startStateHash",
             "orderedExternalInfluences",
+            "timedExternalInfluences",
+            "appliedTimedInfluences",
+            "unappliedTimedInfluences",
             "modulesActivated",
             "stateTransitions",
             "contradictions",
