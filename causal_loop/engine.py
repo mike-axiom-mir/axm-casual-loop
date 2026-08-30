@@ -4,7 +4,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 import hashlib
 import json
-from typing import Any, Callable, Iterable, Mapping, Sequence
+from typing import Any, Callable, Iterable, Iterator, Mapping, Sequence
 
 State = dict[str, Any]
 Predicate = Callable[[Mapping[str, Any]], bool]
@@ -35,6 +35,31 @@ class TimedInfluence:
 
     def contract(self, sequence: int) -> dict[str, Any]:
         return {"atWave": self.at_wave, "sequence": sequence, "action": self.action}
+
+
+class _UndeclaredModuleRead(RuntimeError):
+    def __init__(self, key: str):
+        super().__init__(key)
+        self.key = key
+
+
+class _ModuleStateView(Mapping[str, Any]):
+    """Read-only state view limited to one module's declared read contract."""
+
+    def __init__(self, state: Mapping[str, Any], allowed_keys: Sequence[str]):
+        self._state = state
+        self._allowed = frozenset(allowed_keys)
+
+    def __getitem__(self, key: str) -> Any:
+        if key not in self._allowed:
+            raise _UndeclaredModuleRead(key)
+        return self._state[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(sorted(key for key in self._allowed if key in self._state))
+
+    def __len__(self) -> int:
+        return sum(key in self._state for key in self._allowed)
 
 
 @dataclass(frozen=True)
@@ -85,7 +110,7 @@ class LoopSpec:
     soft_invariants: tuple[Invariant, ...]
     intervention_handler: InterventionHandler = field(compare=False, repr=False)
     max_waves: int = 64
-    receipt_schema: str = "axm.causal-loop.run-receipt/v0.04"
+    receipt_schema: str = "axm.causal-loop.run-receipt/v0.05"
 
 
 class CausalLoopEngine:
@@ -100,9 +125,11 @@ class CausalLoopEngine:
     without re-executing the already committed prefix of that run.
     v0.04: declared module authority scopes are enforced before any proposed write can
     enter the deterministic merge.
+    v0.05: predicates and transitions receive only their declared read keys; undeclared
+    reads fail explicitly before a wave can commit.
     """
 
-    CHECKPOINT_SCHEMA = "axm.causal-loop.checkpoint/v0.04"
+    CHECKPOINT_SCHEMA = "axm.causal-loop.checkpoint/v0.05"
 
     def __init__(self, spec: LoopSpec, modules: Iterable[Module]):
         self.spec = spec
@@ -206,6 +233,7 @@ class CausalLoopEngine:
             "activated": [],
             "contradictions": [],
             "authority_violations": [],
+            "read_violations": [],
             "convergence_path": [start_hash],
             "seen_cycle_keys": [],
             "max_active_workset": 0,
@@ -218,6 +246,16 @@ class CausalLoopEngine:
             context["status"] = "failed"
             context["failure_reason"] = "start_invariant_failed"
         return context
+
+    @staticmethod
+    def _read_violation(module: Module, wave: int, phase: str, key: str) -> dict[str, Any]:
+        return {
+            "wave": wave,
+            "moduleId": module.module_id,
+            "phase": phase,
+            "undeclaredKey": key,
+            "declaredReads": list(module.reads),
+        }
 
     def _execute(self, context: dict[str, Any], *, pause_after_waves: int | None = None) -> None:
         if context["status"] != "running":
@@ -291,10 +329,25 @@ class CausalLoopEngine:
             context["seen_cycle_keys"].append(cycle_key)
 
             snapshot = deepcopy(state)
-            applicable = sorted(
-                (module for module in self.modules if module.predicate(snapshot)),
-                key=lambda module: module.module_id,
-            )
+            applicable: list[Module] = []
+            predicate_read_violations: list[dict[str, Any]] = []
+            for module in sorted(self.modules, key=lambda item: item.module_id):
+                try:
+                    relevant = module.predicate(_ModuleStateView(snapshot, module.reads))
+                except _UndeclaredModuleRead as exc:
+                    predicate_read_violations.append(
+                        self._read_violation(module, waves_executed, "predicate", exc.key)
+                    )
+                    continue
+                if relevant:
+                    applicable.append(module)
+
+            if predicate_read_violations:
+                context["read_violations"].extend(predicate_read_violations)
+                context["status"] = "failed"
+                context["failure_reason"] = "read_scope_violation"
+                return
+
             context["max_active_workset"] = max(context["max_active_workset"], len(applicable))
             if not applicable:
                 context["status"] = "failed"
@@ -302,12 +355,18 @@ class CausalLoopEngine:
                 return
 
             proposals: list[tuple[Module, dict[str, Any]]] = []
+            transition_read_violations: list[dict[str, Any]] = []
             wave_authority_violations: list[dict[str, Any]] = []
             for module in applicable:
+                try:
+                    raw_writes = dict(module.transition(_ModuleStateView(snapshot, module.reads)))
+                except _UndeclaredModuleRead as exc:
+                    transition_read_violations.append(
+                        self._read_violation(module, waves_executed, "transition", exc.key)
+                    )
+                    continue
                 writes = {
-                    key: value
-                    for key, value in dict(module.transition(snapshot)).items()
-                    if snapshot.get(key) != value
+                    key: value for key, value in raw_writes.items() if snapshot.get(key) != value
                 }
                 unauthorized_keys = sorted(set(writes) - set(module.authority_scope))
                 if unauthorized_keys:
@@ -322,6 +381,12 @@ class CausalLoopEngine:
                         }
                     )
                 proposals.append((module, writes))
+
+            if transition_read_violations:
+                context["read_violations"].extend(transition_read_violations)
+                context["status"] = "failed"
+                context["failure_reason"] = "read_scope_violation"
+                return
 
             if wave_authority_violations:
                 context["authority_violations"].extend(wave_authority_violations)
@@ -401,6 +466,7 @@ class CausalLoopEngine:
             "stateTransitions": deepcopy(context["transitions"]),
             "contradictions": deepcopy(context["contradictions"]),
             "authorityViolations": deepcopy(context["authority_violations"]),
+            "readViolations": deepcopy(context["read_violations"]),
             "convergencePath": deepcopy(context["convergence_path"]),
             "seenCycleKeys": deepcopy(context["seen_cycle_keys"]),
             "maxActiveWorkset": context["max_active_workset"],
@@ -447,6 +513,7 @@ class CausalLoopEngine:
             "activated": data["modulesActivated"],
             "contradictions": data["contradictions"],
             "authority_violations": data["authorityViolations"],
+            "read_violations": data["readViolations"],
             "convergence_path": data["convergencePath"],
             "seen_cycle_keys": data["seenCycleKeys"],
             "max_active_workset": data["maxActiveWorkset"],
@@ -541,6 +608,7 @@ class CausalLoopEngine:
             "stateTransitions": deepcopy(context["transitions"]),
             "contradictions": deepcopy(context["contradictions"]),
             "authorityViolations": deepcopy(context["authority_violations"]),
+            "readViolations": deepcopy(context["read_violations"]),
             "convergencePath": deepcopy(context["convergence_path"]),
             "endState": deepcopy(state),
             "endStateHash": deterministic_hash(state),
@@ -557,6 +625,7 @@ class CausalLoopEngine:
                 "maxActiveWorkset": context["max_active_workset"],
                 "contradictionCount": len(context["contradictions"]),
                 "authorityViolationCount": len(context["authority_violations"]),
+                "readViolationCount": len(context["read_violations"]),
                 "cpuTimeNs": None,
             },
         }
@@ -581,7 +650,8 @@ class CausalLoopEngine:
             "orderedExternalInfluences", "timedExternalInfluences",
             "appliedTimedInfluences", "unappliedTimedInfluences",
             "modulesActivated", "stateTransitions", "contradictions", "authorityViolations",
-            "convergencePath", "endStateHash", "invariantResults", "historyEffects",
+            "readViolations", "convergencePath", "endStateHash", "invariantResults",
+            "historyEffects",
         )
         replayed["replayMatches"] = all(replayed[key] == receipt[key] for key in comparable_keys)
         return replayed
