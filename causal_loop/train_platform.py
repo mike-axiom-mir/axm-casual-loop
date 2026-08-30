@@ -40,18 +40,14 @@ def intervention_handler(action: str, state: Mapping[str, Any]) -> Mapping[str, 
     if action == "WAIT":
         return {}
     if action == "BLOCK_DOOR":
-        # An early request may remain pending until the door opens, but a closed door that
-        # has already completed its boarding cycle cannot be retroactively blocked.
         if state["train.status"] == "departed" or state["flags.doorClosed"]:
             return {}
         return {"player.blockingDoor": True}
     if action == "TRIGGER_ALARM":
-        # Once the train has left this bounded scene, the action belongs to another loop.
         if state["train.status"] == "departed":
             return {}
         return {"player.triggerAlarm": True}
     if action == "TALK_TO_PASSENGER":
-        # Direction is accepted only while a conversation can still causally occur.
         if state["passenger.state"] == "boarded" or state["passenger.talkedTo"]:
             return {}
         return {"player.talkingToPassenger": True}
@@ -126,8 +122,15 @@ def _modules() -> list[Module]:
         ),
         Module(
             "09-guard-investigate",
-            "0.01",
-            ("platform.obstructed", "alarm.active", "guard.state", "flags.guardResolved"),
+            "0.02",
+            (
+                "platform.obstructed",
+                "alarm.active",
+                "guard.state",
+                "flags.guardResolved",
+                "player.blockingDoor",
+                "player.triggerAlarm",
+            ),
             lambda s: s["platform.obstructed"] or s["alarm.active"],
             lambda s: {
                 "guard.state": "resolved_incident",
@@ -262,7 +265,7 @@ def build_engine(*, reverse_registry: bool = False, max_waves: int = 64) -> Caus
         modules.reverse()
     spec = LoopSpec(
         loop_id=LOOP_ID,
-        version="0.04",
+        version="0.05",
         start_invariant=Invariant(
             "train_approaches_station",
             lambda s: s["train.status"] == "approaching",
