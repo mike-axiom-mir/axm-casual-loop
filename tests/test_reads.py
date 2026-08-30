@@ -98,18 +98,18 @@ class ReadScopeTests(unittest.TestCase):
         self.assertEqual(first["readViolations"], second["readViolations"])
         self.assertEqual(first["endStateHash"], second["endStateHash"])
 
-    def test_train_detection_identifies_guard_hidden_trigger_read(self):
-        receipt = build_engine().run(initial_state(), ["BLOCK_DOOR"])
-        self.assertEqual(receipt["status"], "failed")
-        self.assertEqual(receipt["failureReason"], "read_scope_violation")
-        self.assertTrue(
-            any(
-                item["moduleId"] == "09-guard-investigate"
-                and item["phase"] == "transition"
-                and item["undeclaredKey"] == "player.triggerAlarm"
-                for item in receipt["readViolations"]
-            )
-        )
+    def test_train_guard_declares_previously_hidden_request_reads(self):
+        engine = build_engine()
+        guard = next(module for module in engine.modules if module.module_id == "09-guard-investigate")
+        self.assertIn("player.blockingDoor", guard.reads)
+        self.assertIn("player.triggerAlarm", guard.reads)
+
+        blocked = engine.run(initial_state(), ["BLOCK_DOOR"])
+        alarmed = engine.run(initial_state(), ["TRIGGER_ALARM"])
+        self.assertEqual(blocked["status"], "converged")
+        self.assertEqual(alarmed["status"], "converged")
+        self.assertEqual(blocked["readViolations"], [])
+        self.assertEqual(alarmed["readViolations"], [])
 
 
 if __name__ == "__main__":
