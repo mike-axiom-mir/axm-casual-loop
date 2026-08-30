@@ -25,6 +25,15 @@ class TrainPlatformProofTests(unittest.TestCase):
         self.assertEqual(normal["endState"]["train.status"], "departed")
         self.assertEqual(blocked["endState"]["train.status"], "departed")
 
+    def test_block_and_alarm_both_propagate_when_both_are_requested(self):
+        receipt = build_engine().run(initial_state(), ["BLOCK_DOOR", "TRIGGER_ALARM"])
+        self.assertEqual(receipt["status"], "converged")
+        self.assertIn("04-obstruction", receipt["modulesActivated"])
+        self.assertIn("05-alarm-trigger", receipt["modulesActivated"])
+        self.assertEqual(receipt["endState"]["delay.block"], 1)
+        self.assertEqual(receipt["endState"]["delay.alarm"], 2)
+        self.assertEqual(receipt["endState"]["train.departureDelay"], 3)
+
     def test_hard_invariants_hold_on_success(self):
         receipt = build_engine().run(initial_state(), ["BLOCK_DOOR", "TRIGGER_ALARM"])
         hard_results = [r for r in receipt["invariantResults"] if r["kind"] in {"hard", "hard_end"}]
