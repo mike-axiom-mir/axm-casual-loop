@@ -17,7 +17,7 @@
   },
   "schema": "axm.causal-loop.v0.03-checkpoint-proof/v1",
   "testCommand": "python -m unittest discover -s tests -v",
-  "testCount": 25,
+  "testCount": 30,
   "timedBaseline": {
     "differentEndStateHash": true,
     "sameAction": "BLOCK_DOOR",
