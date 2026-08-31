@@ -1,0 +1,29 @@
+{
+  "schema": "axm.causal-loop.convergence-effect-gap/v0.11",
+  "status": "open-gap",
+  "sourceHead": "32c08658a52243acb3c22c308b29db26b1ab7a0a",
+  "field": "Module.convergence_effects",
+  "finding": {
+    "fieldBoundIntoModuleContract": true,
+    "fieldChangesEngineSignature": true,
+    "executorConsultsFieldForConvergence": false,
+    "hardEndpointCanConvergeWithNoDeclaredEffect": true,
+    "declaredEffectCanActivateWithoutCausingConvergence": true,
+    "runReceiptRecordsRealizedEffects": false
+  },
+  "trainObservation": {
+    "moduleId": "12-train-depart",
+    "declaredEffect": "train_departed",
+    "actualCurrentConvergenceAuthority": "end invariant train.status == departed"
+  },
+  "requiredRepair": {
+    "rule": "a convergence effect counts only when a module carrying that declaration actually commits; a loop may require named effects before its raw end predicate is accepted",
+    "doNotSolveBy": [
+      "treating registration as realization",
+      "letting an effect label alone mutate state",
+      "replacing hard end invariants with labels",
+      "silently accepting missing required effects"
+    ]
+  },
+  "claimBoundary": "This evidence shows convergence_effects is currently signed descriptive metadata in v0.10. It does not yet establish the right semantics for arbitrary convergence topologies."
+}
