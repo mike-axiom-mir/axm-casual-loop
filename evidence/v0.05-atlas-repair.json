@@ -1,0 +1,40 @@
+{
+  "schema": "axm.causal-loop.causal-atlas-repair/v0.05",
+  "sourceHead": "5e363d7ab35ef34f387ba0908dcf9aa988bef812",
+  "workflowRunId": 33333185500,
+  "testCount": 39,
+  "atlasHash": "ff7deaa01bd7adc7f6df53cc35720ce8434f8200a5b7adfbd36cbb257b4b46f5",
+  "before": {
+    "evidence": "evidence/v0.05-atlas-detection.json",
+    "atlasHash": "cce9371c8187cc1c0cbd20834e3209da885012faaa82ebde6592a131b3782117",
+    "uniqueRealizedPathCount": 125,
+    "uniqueEndStateCount": 17,
+    "orphanExternalWriteKeys": ["player.talkingToPassenger"],
+    "unresolvedExternalWriteKeys": ["player.blockingDoor", "player.talkingToPassenger", "player.triggerAlarm"]
+  },
+  "after": {
+    "caseCount": 145,
+    "convergedCount": 145,
+    "failedCount": 0,
+    "uniqueRealizedPathCount": 129,
+    "uniqueEndStateCount": 7,
+    "deterministicMismatchCount": 0,
+    "hardInvariantFailureCaseCount": 0,
+    "contradictionCaseCount": 0,
+    "orphanExternalWriteKeys": [],
+    "unresolvedExternalWriteKeys": [],
+    "failuresByReason": {}
+  },
+  "repairs": [
+    "Late impossible BLOCK_DOOR actions are acknowledged as applied no-ops with zero canonical writes.",
+    "TALK_TO_PASSENGER is consumed by a deterministic conversation module rather than leaving an unread direction flag.",
+    "Boarding waits while a conversation direction is active.",
+    "Train departure requires alarm, obstruction, block, alarm-request, and talk-request causal debt to be resolved.",
+    "A hard invariant rejects departed state that still carries transient causal debt."
+  ],
+  "interpretation": [
+    "The bounded probe retained deterministic replay while removing the detected orphan and unresolved external-write classes.",
+    "The lower endpoint-state count reflects removal of transient direction residue from converged states, while realized path diversity increased.",
+    "This evidence only covers the bounded 145-case probe and is not a claim of general completeness."
+  ]
+}

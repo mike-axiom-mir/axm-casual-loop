@@ -1,0 +1,112 @@
+{
+  "localTestCommand": "python -m unittest discover -s tests -v",
+  "repeatability": {
+    "sameEndStateHash": true,
+    "sameReceiptHash": true,
+    "sameStateTransitions": true
+  },
+  "scenarios": {
+    "block_door": {
+      "contradictionCount": 0,
+      "departureDelay": 1,
+      "endStateHash": "bee26d554abab55e7544fd6206cf6377fe763b4b7590f660937a7ee75b8b0b35",
+      "hardEndPassed": true,
+      "modulesActivated": [
+        "01-train-arrive",
+        "02-door-open",
+        "03-passenger-approach",
+        "04-obstruction",
+        "06-block-delay",
+        "09-guard-investigate",
+        "08-delay-derive",
+        "10-passenger-board",
+        "11-door-close",
+        "12-train-depart"
+      ],
+      "orderedExternalInfluences": [
+        "BLOCK_DOOR"
+      ],
+      "receiptHash": "b42b93be1369a8af2a2461728f002048b5be4de1996db417d2c8cf2468447647",
+      "runId": "32ab8727be3dcce4e5aaf7d9",
+      "softOnTimePassed": false,
+      "status": "converged"
+    },
+    "block_plus_alarm": {
+      "contradictionCount": 0,
+      "departureDelay": 3,
+      "endStateHash": "5dd0ea43efb1a5231aa0c28e2bd56245653d5c18a4139852a1a3ebf913166e10",
+      "hardEndPassed": true,
+      "modulesActivated": [
+        "01-train-arrive",
+        "05-alarm-trigger",
+        "02-door-open",
+        "03-passenger-approach",
+        "07-alarm-delay",
+        "09-guard-investigate",
+        "04-obstruction",
+        "08-delay-derive",
+        "06-block-delay",
+        "09-guard-investigate",
+        "08-delay-derive",
+        "10-passenger-board",
+        "11-door-close",
+        "12-train-depart"
+      ],
+      "orderedExternalInfluences": [
+        "BLOCK_DOOR",
+        "TRIGGER_ALARM"
+      ],
+      "receiptHash": "29b06b7daeec5692bfec4f65a08571b84a30a3bafa9996572c34a8102513530e",
+      "runId": "9d19db48192c58c07e7b0bd6",
+      "softOnTimePassed": false,
+      "status": "converged"
+    },
+    "no_intervention": {
+      "contradictionCount": 0,
+      "departureDelay": 0,
+      "endStateHash": "9c25eaf3549881deba041353cb2fee606649e2a280de38cb4603d4180245296b",
+      "hardEndPassed": true,
+      "modulesActivated": [
+        "01-train-arrive",
+        "02-door-open",
+        "03-passenger-approach",
+        "10-passenger-board",
+        "11-door-close",
+        "12-train-depart"
+      ],
+      "orderedExternalInfluences": [
+        "WAIT"
+      ],
+      "receiptHash": "78cad0b5aabd292cca75769eaee1b276be22e0193da2ec1d7ececaab3a87ae46",
+      "runId": "585a1c53e7d64abba75fd3fb",
+      "softOnTimePassed": true,
+      "status": "converged"
+    },
+    "trigger_alarm": {
+      "contradictionCount": 0,
+      "departureDelay": 2,
+      "endStateHash": "171fca3d71798c5022caf6192d71f323bc2f85802203107c72c451913643efbf",
+      "hardEndPassed": true,
+      "modulesActivated": [
+        "01-train-arrive",
+        "05-alarm-trigger",
+        "02-door-open",
+        "03-passenger-approach",
+        "07-alarm-delay",
+        "09-guard-investigate",
+        "08-delay-derive",
+        "10-passenger-board",
+        "11-door-close",
+        "12-train-depart"
+      ],
+      "orderedExternalInfluences": [
+        "TRIGGER_ALARM"
+      ],
+      "receiptHash": "8cfb8ae7ac6bdd4d035c4675252387db42ef16d038b6a67e195ea51244127fc9",
+      "runId": "55bb515036a396a50ece3c4e",
+      "softOnTimePassed": false,
+      "status": "converged"
+    }
+  },
+  "schema": "axm.causal-loop.v0.01-proof/v1"
+}

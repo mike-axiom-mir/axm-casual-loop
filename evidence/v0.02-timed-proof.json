@@ -1,0 +1,399 @@
+{
+  "legacyScenarios": {
+    "block_door": {
+      "appliedTimedInfluences": [
+        {
+          "action": "BLOCK_DOOR",
+          "atWave": 0,
+          "sequence": 0,
+          "writes": {
+            "player.blockingDoor": true
+          }
+        }
+      ],
+      "contradictionCount": 0,
+      "departureDelay": 1,
+      "endStateHash": "bee26d554abab55e7544fd6206cf6377fe763b4b7590f660937a7ee75b8b0b35",
+      "hardEndPassed": true,
+      "modulesActivated": [
+        "01-train-arrive",
+        "02-door-open",
+        "03-passenger-approach",
+        "04-obstruction",
+        "06-block-delay",
+        "09-guard-investigate",
+        "08-delay-derive",
+        "10-passenger-board",
+        "11-door-close",
+        "12-train-depart"
+      ],
+      "receiptHash": "3a3ed2bbc848cb4d70746f0d92f57ea14b4958cad7b4e2a950088e02d5e3c924",
+      "runId": "4c4c3b88e9c7552f8bc41511",
+      "softOnTimePassed": false,
+      "status": "converged",
+      "timedExternalInfluences": [
+        {
+          "action": "BLOCK_DOOR",
+          "atWave": 0,
+          "sequence": 0
+        }
+      ],
+      "unappliedTimedInfluences": []
+    },
+    "block_plus_alarm": {
+      "appliedTimedInfluences": [
+        {
+          "action": "BLOCK_DOOR",
+          "atWave": 0,
+          "sequence": 0,
+          "writes": {
+            "player.blockingDoor": true
+          }
+        },
+        {
+          "action": "TRIGGER_ALARM",
+          "atWave": 0,
+          "sequence": 1,
+          "writes": {
+            "player.triggerAlarm": true
+          }
+        }
+      ],
+      "contradictionCount": 0,
+      "departureDelay": 3,
+      "endStateHash": "5dd0ea43efb1a5231aa0c28e2bd56245653d5c18a4139852a1a3ebf913166e10",
+      "hardEndPassed": true,
+      "modulesActivated": [
+        "01-train-arrive",
+        "05-alarm-trigger",
+        "02-door-open",
+        "03-passenger-approach",
+        "07-alarm-delay",
+        "09-guard-investigate",
+        "04-obstruction",
+        "08-delay-derive",
+        "06-block-delay",
+        "09-guard-investigate",
+        "08-delay-derive",
+        "10-passenger-board",
+        "11-door-close",
+        "12-train-depart"
+      ],
+      "receiptHash": "af9c4d0a3ccba66a1f62f414e5946a49cf405eb6e76de13a43337b4a9593a9d3",
+      "runId": "1ec758045a3096de2b2cb7c6",
+      "softOnTimePassed": false,
+      "status": "converged",
+      "timedExternalInfluences": [
+        {
+          "action": "BLOCK_DOOR",
+          "atWave": 0,
+          "sequence": 0
+        },
+        {
+          "action": "TRIGGER_ALARM",
+          "atWave": 0,
+          "sequence": 1
+        }
+      ],
+      "unappliedTimedInfluences": []
+    },
+    "no_intervention": {
+      "appliedTimedInfluences": [
+        {
+          "action": "WAIT",
+          "atWave": 0,
+          "sequence": 0,
+          "writes": {}
+        }
+      ],
+      "contradictionCount": 0,
+      "departureDelay": 0,
+      "endStateHash": "9c25eaf3549881deba041353cb2fee606649e2a280de38cb4603d4180245296b",
+      "hardEndPassed": true,
+      "modulesActivated": [
+        "01-train-arrive",
+        "02-door-open",
+        "03-passenger-approach",
+        "10-passenger-board",
+        "11-door-close",
+        "12-train-depart"
+      ],
+      "receiptHash": "d2ecd1a2c565b2210b6aaf9704ecb1c33ebf013f30e7d3826cec4f13a3c5aec2",
+      "runId": "b42e56518d77228cee7953b3",
+      "softOnTimePassed": true,
+      "status": "converged",
+      "timedExternalInfluences": [
+        {
+          "action": "WAIT",
+          "atWave": 0,
+          "sequence": 0
+        }
+      ],
+      "unappliedTimedInfluences": []
+    },
+    "trigger_alarm": {
+      "appliedTimedInfluences": [
+        {
+          "action": "TRIGGER_ALARM",
+          "atWave": 0,
+          "sequence": 0,
+          "writes": {
+            "player.triggerAlarm": true
+          }
+        }
+      ],
+      "contradictionCount": 0,
+      "departureDelay": 2,
+      "endStateHash": "171fca3d71798c5022caf6192d71f323bc2f85802203107c72c451913643efbf",
+      "hardEndPassed": true,
+      "modulesActivated": [
+        "01-train-arrive",
+        "05-alarm-trigger",
+        "02-door-open",
+        "03-passenger-approach",
+        "07-alarm-delay",
+        "09-guard-investigate",
+        "08-delay-derive",
+        "10-passenger-board",
+        "11-door-close",
+        "12-train-depart"
+      ],
+      "receiptHash": "2c6c5a9ed178b7facdb7a48088de12954a5f3dad1372448ed6f650a6238c5bfc",
+      "runId": "68f73c3dc8b23d69bca6d1fc",
+      "softOnTimePassed": false,
+      "status": "converged",
+      "timedExternalInfluences": [
+        {
+          "action": "TRIGGER_ALARM",
+          "atWave": 0,
+          "sequence": 0
+        }
+      ],
+      "unappliedTimedInfluences": []
+    }
+  },
+  "localTestCommand": "python -m unittest discover -s tests -v",
+  "schema": "axm.causal-loop.v0.02-timed-proof/v1",
+  "timedRepeatability": {
+    "replayMatches": true,
+    "sameEndStateHash": true,
+    "sameReceiptHash": true,
+    "sameStateTransitions": true
+  },
+  "timedScenarios": {
+    "alarm_mid_run": {
+      "appliedTimedInfluences": [
+        {
+          "action": "TRIGGER_ALARM",
+          "atWave": 2,
+          "sequence": 0,
+          "writes": {
+            "player.triggerAlarm": true
+          }
+        }
+      ],
+      "contradictionCount": 0,
+      "departureDelay": 2,
+      "endStateHash": "171fca3d71798c5022caf6192d71f323bc2f85802203107c72c451913643efbf",
+      "hardEndPassed": true,
+      "modulesActivated": [
+        "01-train-arrive",
+        "02-door-open",
+        "03-passenger-approach",
+        "05-alarm-trigger",
+        "07-alarm-delay",
+        "09-guard-investigate",
+        "08-delay-derive",
+        "10-passenger-board",
+        "11-door-close",
+        "12-train-depart"
+      ],
+      "receiptHash": "7f45e9b451cedbb46956d4d9476bf0b2c7c3b1d4ff049406e6981eb54a73693c",
+      "runId": "2ffdae432ff7b766b0e5690d",
+      "softOnTimePassed": false,
+      "status": "converged",
+      "timedExternalInfluences": [
+        {
+          "action": "TRIGGER_ALARM",
+          "atWave": 2,
+          "sequence": 0
+        }
+      ],
+      "unappliedTimedInfluences": []
+    },
+    "block_after_door_closed": {
+      "appliedTimedInfluences": [
+        {
+          "action": "BLOCK_DOOR",
+          "atWave": 4,
+          "sequence": 0,
+          "writes": {
+            "player.blockingDoor": true
+          }
+        }
+      ],
+      "contradictionCount": 0,
+      "departureDelay": 0,
+      "endStateHash": "f7b1a5511fb02268722d59af52d7ad76aaee4a6029b0852097eb8cf59c474b3f",
+      "hardEndPassed": true,
+      "modulesActivated": [
+        "01-train-arrive",
+        "02-door-open",
+        "03-passenger-approach",
+        "10-passenger-board",
+        "11-door-close",
+        "12-train-depart"
+      ],
+      "receiptHash": "3446462aeb6ab1b76376388ecbf78e7ddce8234a8d0d9728a466175274bcb75a",
+      "runId": "0db0b38ad575a34f27a9e10e",
+      "softOnTimePassed": true,
+      "status": "converged",
+      "timedExternalInfluences": [
+        {
+          "action": "BLOCK_DOOR",
+          "atWave": 4,
+          "sequence": 0
+        }
+      ],
+      "unappliedTimedInfluences": []
+    },
+    "block_then_alarm": {
+      "appliedTimedInfluences": [
+        {
+          "action": "BLOCK_DOOR",
+          "atWave": 2,
+          "sequence": 0,
+          "writes": {
+            "player.blockingDoor": true
+          }
+        },
+        {
+          "action": "TRIGGER_ALARM",
+          "atWave": 3,
+          "sequence": 1,
+          "writes": {
+            "player.triggerAlarm": true
+          }
+        }
+      ],
+      "contradictionCount": 0,
+      "departureDelay": 3,
+      "endStateHash": "5dd0ea43efb1a5231aa0c28e2bd56245653d5c18a4139852a1a3ebf913166e10",
+      "hardEndPassed": true,
+      "modulesActivated": [
+        "01-train-arrive",
+        "02-door-open",
+        "03-passenger-approach",
+        "04-obstruction",
+        "05-alarm-trigger",
+        "06-block-delay",
+        "09-guard-investigate",
+        "07-alarm-delay",
+        "08-delay-derive",
+        "09-guard-investigate",
+        "08-delay-derive",
+        "10-passenger-board",
+        "11-door-close",
+        "12-train-depart"
+      ],
+      "receiptHash": "83b892dbbcfaaa7a4696f398ddb8d21cdfe9dea6636d11a25ab7d0163609a6be",
+      "runId": "96b52b40423a3681e6dd488c",
+      "softOnTimePassed": false,
+      "status": "converged",
+      "timedExternalInfluences": [
+        {
+          "action": "BLOCK_DOOR",
+          "atWave": 2,
+          "sequence": 0
+        },
+        {
+          "action": "TRIGGER_ALARM",
+          "atWave": 3,
+          "sequence": 1
+        }
+      ],
+      "unappliedTimedInfluences": []
+    },
+    "block_while_door_open": {
+      "appliedTimedInfluences": [
+        {
+          "action": "BLOCK_DOOR",
+          "atWave": 2,
+          "sequence": 0,
+          "writes": {
+            "player.blockingDoor": true
+          }
+        }
+      ],
+      "contradictionCount": 0,
+      "departureDelay": 1,
+      "endStateHash": "bee26d554abab55e7544fd6206cf6377fe763b4b7590f660937a7ee75b8b0b35",
+      "hardEndPassed": true,
+      "modulesActivated": [
+        "01-train-arrive",
+        "02-door-open",
+        "03-passenger-approach",
+        "04-obstruction",
+        "06-block-delay",
+        "09-guard-investigate",
+        "08-delay-derive",
+        "10-passenger-board",
+        "11-door-close",
+        "12-train-depart"
+      ],
+      "receiptHash": "65956fe443d9869957bddff40f30b1db3641099d0e1a55610742d751f3308b0a",
+      "runId": "d618947bf779a35e573ddaab",
+      "softOnTimePassed": false,
+      "status": "converged",
+      "timedExternalInfluences": [
+        {
+          "action": "BLOCK_DOOR",
+          "atWave": 2,
+          "sequence": 0
+        }
+      ],
+      "unappliedTimedInfluences": []
+    },
+    "future_alarm_after_convergence": {
+      "appliedTimedInfluences": [],
+      "contradictionCount": 0,
+      "departureDelay": 0,
+      "endStateHash": "9c25eaf3549881deba041353cb2fee606649e2a280de38cb4603d4180245296b",
+      "hardEndPassed": true,
+      "modulesActivated": [
+        "01-train-arrive",
+        "02-door-open",
+        "03-passenger-approach",
+        "10-passenger-board",
+        "11-door-close",
+        "12-train-depart"
+      ],
+      "receiptHash": "2e146545c0d9c14e500a212b2fcca56cee3536ac8a226fe136a72dbf599e5537",
+      "runId": "33df7abb43eea20dd39aa12f",
+      "softOnTimePassed": true,
+      "status": "converged",
+      "timedExternalInfluences": [
+        {
+          "action": "TRIGGER_ALARM",
+          "atWave": 9,
+          "sequence": 0
+        }
+      ],
+      "unappliedTimedInfluences": [
+        {
+          "action": "TRIGGER_ALARM",
+          "atWave": 9,
+          "sequence": 0
+        }
+      ]
+    }
+  },
+  "timingChangesConsequence": {
+    "afterDoorClosedDelay": 0,
+    "afterDoorClosedWave": 4,
+    "differentEndStateHash": true,
+    "sameAction": "BLOCK_DOOR",
+    "whileDoorOpenDelay": 1,
+    "whileDoorOpenWave": 2
+  }
+}

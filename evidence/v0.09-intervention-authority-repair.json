@@ -1,0 +1,51 @@
+{
+  "schema": "axm.causal-loop.intervention-authority-repair/v0.09",
+  "status": "repaired",
+  "sourceHead": "e9125b8ae7b565f5270b724eed63a117c31cb00c",
+  "workflowRunId": 33337396168,
+  "testCount": 55,
+  "atlasHash": "593f14369c4aed53f7ff08e91120f2cfb611eeba9791b2ccfa34afe31a9602b0",
+  "before": {
+    "evidence": "evidence/v0.09-intervention-authority-gap.json",
+    "engineAcceptedArbitraryInterventionWrites": true,
+    "hardEndCouldBeReachedWithoutModuleActivation": true
+  },
+  "after": {
+    "engineAcceptedArbitraryInterventionWrites": false,
+    "failureReason": "intervention_scope_violation",
+    "rejectedWriteTouchesCanonicalState": false,
+    "rejectedActionAppearsAsApplied": false,
+    "violationReceiptDeterministic": true,
+    "allowedDirectionStillRequiresCausalModule": true,
+    "caseCount": 208,
+    "convergedCount": 208,
+    "failedCount": 0,
+    "uniqueRealizedPathCount": 183,
+    "uniqueEndStateCount": 9,
+    "deterministicMismatchCount": 0,
+    "hardInvariantFailureCaseCount": 0,
+    "contradictionCaseCount": 0,
+    "authorityViolationCaseCount": 0,
+    "readViolationCaseCount": 0,
+    "orphanExternalWriteKeys": [],
+    "unresolvedExternalWriteKeys": []
+  },
+  "contract": {
+    "loopField": "intervention_write_scope",
+    "trainScope": [
+      "player.blockingDoor",
+      "player.triggerAlarm",
+      "player.talkingToPassenger"
+    ],
+    "engineSignatureBindsScope": true,
+    "checkpointSchema": "axm.causal-loop.checkpoint/v0.06",
+    "runReceiptSchema": "axm.causal-loop.run-receipt/v0.06"
+  },
+  "implementation": {
+    "hardenedFrontDoor": "causal_loop/engine.py",
+    "preservedBaseline": "causal_loop/engine_legacy.py",
+    "trainFrontDoor": "causal_loop/train_platform.py",
+    "preservedTrainBaseline": "causal_loop/train_platform_legacy.py"
+  },
+  "claimBoundary": "The in-process executor now enforces declared intervention write scope before external writes enter canonical state. This is a deterministic contract boundary, not an OS/process security sandbox."
+}
