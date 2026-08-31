@@ -1,0 +1,54 @@
+{
+  "schema": "axm.causal-loop.convergence-effect-repair/v0.11",
+  "status": "repaired",
+  "sourceHead": "b6b2f9e235aff2cdbba23e32e9b390cfb9cf976c",
+  "workflowRunId": 33403824968,
+  "testCount": 74,
+  "atlasHash": "22c3eb2e40d2d188824b48aaaa14be635dfc35bf569997d56c3540a8d1070ef7",
+  "before": {
+    "evidence": "evidence/v0.11-convergence-effect-gap.json",
+    "convergenceEffectsWereSignedMetadataOnly": true,
+    "rawEndpointCouldConvergeWithoutAnyDeclaredEffect": true,
+    "declaredEffectCouldActivateWithoutCausingConvergence": true,
+    "receiptRecordedRealizedEffects": false
+  },
+  "after": {
+    "convergenceEffectPolicy": "required-committed-effects/v0.01",
+    "rawEndInvariantStillMandatory": true,
+    "effectLabelsMutateState": false,
+    "registrationAloneRealizesEffect": false,
+    "stateChangingModuleActivationRequiredToRealizeEffect": true,
+    "unknownRequiredEffectsRejected": true,
+    "duplicateOrBlankEffectDeclarationsRejected": true,
+    "rawEndpointWithoutRequiredProofFailureReason": "unsatisfied_convergence_effects",
+    "effectFailureReplayDeterministic": true,
+    "checkpointPreservesRealizedEffects": true,
+    "caseCount": 208,
+    "convergedCount": 208,
+    "failedCount": 0,
+    "uniqueRealizedPathCount": 183,
+    "uniqueEndStateCount": 9,
+    "deterministicMismatchCount": 0,
+    "hardInvariantFailureCaseCount": 0,
+    "contradictionCaseCount": 0,
+    "authorityViolationCaseCount": 0,
+    "readViolationCaseCount": 0,
+    "orphanExternalWriteKeys": [],
+    "unresolvedExternalWriteKeys": []
+  },
+  "trainContract": {
+    "rawEndInvariant": "train.status == departed",
+    "requiredConvergenceEffects": ["train_departed"],
+    "declaringModule": "12-train-depart",
+    "trainVersion": "0.08",
+    "runReceiptSchema": "axm.causal-loop.run-receipt/v0.08",
+    "checkpointSchema": "axm.causal-loop.checkpoint/v0.08"
+  },
+  "implementation": {
+    "currentFrontDoor": "causal_loop/engine.py",
+    "preservedConvergenceMetadataBaseline": "causal_loop/engine_v07.py",
+    "preservedTrainBaseline": "causal_loop/train_platform_v07.py",
+    "engineSignatureBindsPolicyAndRequiredEffects": true
+  },
+  "claimBoundary": "The executor now supports a narrow AND policy: raw hard-end truth plus all explicitly required named effects realized by committed state-changing module activations. This does not model OR, quorum, weighted, temporal, or richer convergence evidence policies."
+}
