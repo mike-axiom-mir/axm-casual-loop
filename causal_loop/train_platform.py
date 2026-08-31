@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from . import train_platform_legacy as _legacy
 from .engine import CausalLoopEngine, Invariant, LoopSpec
 
@@ -13,14 +15,35 @@ INTERVENTION_WRITE_SCOPE = (
     "player.talkingToPassenger",
 )
 
+MODULE_DEPENDENCIES = {
+    "02-door-open": ("01-train-arrive",),
+    "03-passenger-approach": ("01-train-arrive",),
+    "04-obstruction": ("02-door-open",),
+    "06-block-delay": ("04-obstruction",),
+    "07-alarm-delay": ("05-alarm-trigger",),
+    "10-passenger-board": ("03-passenger-approach",),
+    "11-door-close": ("10-passenger-board",),
+    "12-train-depart": ("11-door-close",),
+}
+
+
+def _modules_with_dependencies():
+    return [
+        replace(
+            module,
+            dependencies=MODULE_DEPENDENCIES.get(module.module_id, module.dependencies),
+        )
+        for module in _legacy._modules()
+    ]
+
 
 def build_engine(*, reverse_registry: bool = False, max_waves: int = 64) -> CausalLoopEngine:
-    modules = _legacy._modules()
+    modules = _modules_with_dependencies()
     if reverse_registry:
         modules.reverse()
     spec = LoopSpec(
         loop_id=LOOP_ID,
-        version="0.06",
+        version="0.07",
         start_invariant=Invariant(
             "train_approaches_station",
             lambda s: s["train.status"] == "approaching",
@@ -52,7 +75,7 @@ def build_engine(*, reverse_registry: bool = False, max_waves: int = 64) -> Caus
         ),
         intervention_handler=intervention_handler,
         max_waves=max_waves,
-        receipt_schema="axm.causal-loop.run-receipt/v0.06",
+        receipt_schema="axm.causal-loop.run-receipt/v0.07",
         intervention_write_scope=INTERVENTION_WRITE_SCOPE,
     )
     return CausalLoopEngine(spec, modules)
