@@ -26,7 +26,7 @@ class InterventionBoundaryTests(unittest.TestCase):
     def test_train_engine_declares_same_direction_scope_as_handler(self):
         engine = build_engine()
         self.assertEqual(set(engine.spec.intervention_write_scope), DIRECTION_KEYS)
-        self.assertEqual(engine.spec.version, "0.06")
+        self.assertEqual(engine.spec.version, "0.07")
 
     def test_train_direction_handler_cannot_declare_delay_consequence(self):
         writes = dict(intervention_handler("BLOCK_DOOR", initial_state()))
