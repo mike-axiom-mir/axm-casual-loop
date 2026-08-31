@@ -15,6 +15,8 @@ INTERVENTION_WRITE_SCOPE = (
     "player.talkingToPassenger",
 )
 
+REQUIRED_CONVERGENCE_EFFECTS = ("train_departed",)
+
 MODULE_DEPENDENCIES = {
     "02-door-open": ("01-train-arrive",),
     "03-passenger-approach": ("01-train-arrive",),
@@ -43,7 +45,7 @@ def build_engine(*, reverse_registry: bool = False, max_waves: int = 64) -> Caus
         modules.reverse()
     spec = LoopSpec(
         loop_id=LOOP_ID,
-        version="0.07",
+        version="0.08",
         start_invariant=Invariant(
             "train_approaches_station",
             lambda s: s["train.status"] == "approaching",
@@ -75,7 +77,8 @@ def build_engine(*, reverse_registry: bool = False, max_waves: int = 64) -> Caus
         ),
         intervention_handler=intervention_handler,
         max_waves=max_waves,
-        receipt_schema="axm.causal-loop.run-receipt/v0.07",
+        receipt_schema="axm.causal-loop.run-receipt/v0.08",
         intervention_write_scope=INTERVENTION_WRITE_SCOPE,
+        required_convergence_effects=REQUIRED_CONVERGENCE_EFFECTS,
     )
     return CausalLoopEngine(spec, modules)
