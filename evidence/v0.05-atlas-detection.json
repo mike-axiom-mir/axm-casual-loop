@@ -1,0 +1,33 @@
+{
+  "schema": "axm.causal-loop.causal-atlas-detection/v0.05",
+  "sourceHead": "920707d69f9d7a602e71911323a75a90ef10730d",
+  "workflowRunId": 33332949449,
+  "testCount": 36,
+  "atlasHash": "cce9371c8187cc1c0cbd20834e3209da885012faaa82ebde6592a131b3782117",
+  "summary": {
+    "caseCount": 145,
+    "convergedCount": 145,
+    "failedCount": 0,
+    "uniqueRealizedPathCount": 125,
+    "uniqueEndStateCount": 17,
+    "deterministicMismatchCount": 0,
+    "hardInvariantFailureCaseCount": 0,
+    "contradictionCaseCount": 0,
+    "orphanExternalWriteKeys": [
+      "player.talkingToPassenger"
+    ],
+    "unresolvedExternalWriteKeys": [
+      "player.blockingDoor",
+      "player.talkingToPassenger",
+      "player.triggerAlarm"
+    ],
+    "failuresByReason": {}
+  },
+  "interpretation": [
+    "The bounded scene remained deterministic across the probed schedule space.",
+    "Existing hard invariants and contradiction checks did not detect all semantically unfinished external direction.",
+    "TALK_TO_PASSENGER currently writes state that no deterministic module reads.",
+    "Some valid timings can converge while transient player direction remains unresolved.",
+    "These findings are architecture diagnostics, not a claim about large or general loop spaces."
+  ]
+}

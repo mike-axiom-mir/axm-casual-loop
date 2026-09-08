@@ -1,0 +1,62 @@
+{
+  "schema": "axm.causal-loop.dependency-repair/v0.10",
+  "status": "repaired",
+  "sourceHead": "918719d25969f41a9d868ff3d9671e68977e0a41",
+  "workflowRunId": 33366739167,
+  "testCount": 64,
+  "atlasHash": "4a801858b301fa9918b2a741ef9c7937c70de91235aaa513c8911fc2d01ab707",
+  "before": {
+    "evidence": "evidence/v0.10-dependency-gap.json",
+    "dependencyFieldAffectedSignatureOnly": true,
+    "dependentCouldActivateBeforePrerequisite": true,
+    "unknownDependencyIdsAccepted": true
+  },
+  "after": {
+    "dependencyPolicy": "all-prior-activation/v0.01",
+    "registeredDependencyIdRequired": true,
+    "selfDependencyRejected": true,
+    "duplicateDependencyRejected": true,
+    "dependencyCyclesRejected": true,
+    "priorCommittedActivationRequired": true,
+    "sameWaveOrderCannotSatisfyDependency": true,
+    "stalledRelevantDependencyFailureReason": "unsatisfied_dependencies",
+    "dependencyBlockReceiptDeterministic": true,
+    "dependencyFailureReplayExact": true,
+    "caseCount": 208,
+    "convergedCount": 208,
+    "failedCount": 0,
+    "uniqueRealizedPathCount": 183,
+    "uniqueEndStateCount": 9,
+    "deterministicMismatchCount": 0,
+    "hardInvariantFailureCaseCount": 0,
+    "contradictionCaseCount": 0,
+    "authorityViolationCaseCount": 0,
+    "readViolationCaseCount": 0,
+    "orphanExternalWriteKeys": [],
+    "unresolvedExternalWriteKeys": []
+  },
+  "trainDependencies": {
+    "02-door-open": ["01-train-arrive"],
+    "03-passenger-approach": ["01-train-arrive"],
+    "04-obstruction": ["02-door-open"],
+    "06-block-delay": ["04-obstruction"],
+    "07-alarm-delay": ["05-alarm-trigger"],
+    "10-passenger-board": ["03-passenger-approach"],
+    "11-door-close": ["10-passenger-board"],
+    "12-train-depart": ["11-door-close"]
+  },
+  "intentionallyNotForced": [
+    "guard-investigate reacts to more than one incident type, so a single AND dependency would misdescribe it",
+    "delay-derive combines independent delay sources, so it is state-derived rather than tied to one prerequisite module",
+    "passenger-conversation is an optional causal path, not a required boarding prerequisite"
+  ],
+  "implementation": {
+    "currentFrontDoor": "causal_loop/engine.py",
+    "preservedDependencyMetadataBaseline": "causal_loop/engine_v06.py",
+    "dependencyPolicyBoundIntoEngineSignature": true,
+    "checkpointSchema": "axm.causal-loop.checkpoint/v0.07",
+    "trainVersion": "0.07",
+    "runReceiptSchema": "axm.causal-loop.run-receipt/v0.07"
+  },
+  "claimBoundary": "The current executor enforces a simple AND-of-prior-committed-module-activation dependency policy. This does not claim that the policy represents every causal topology; optional, OR, quorum, state-only, or richer dependency relationships require separate explicit contracts rather than being forced into this field."
+}

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AXM Causal Loop Observer</title>
+<style>
+:root{color-scheme:dark;--bg:#070b11;--panel:rgba(18,25,36,.78);--line:rgba(165,199,255,.18);--text:#e8f0ff;--muted:#8ea0bb;--glow:#9dd7ff;--warn:#ffcc76;--ok:#9fffbf}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;background:radial-gradient(circle at 50% -15%,#18304b 0,#0b1420 34%,var(--bg) 72%);color:var(--text)}
+.shell{max-width:1180px;margin:auto;padding:22px}.top{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:18px}.brand{display:flex;align-items:center;gap:12px}.mark{width:42px;height:42px;border:1px solid rgba(157,215,255,.45);border-radius:13px;background:linear-gradient(145deg,rgba(157,215,255,.18),rgba(157,215,255,.03));box-shadow:0 0 28px rgba(104,185,255,.16);display:grid;place-items:center;font-weight:800}.title{font-size:18px;font-weight:760;letter-spacing:.02em}.sub{font-size:12px;color:var(--muted);margin-top:3px}.badge{font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:8px 11px;border:1px solid rgba(159,255,191,.34);border-radius:999px;color:var(--ok);background:rgba(57,120,78,.12)}
+.grid{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(270px,.72fr);gap:16px}@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{border:1px solid var(--line);border-radius:18px;background:linear-gradient(160deg,rgba(27,39,55,.82),rgba(10,15,23,.88));box-shadow:0 18px 60px rgba(0,0,0,.26),inset 0 1px rgba(255,255,255,.04);overflow:hidden}.pad{padding:16px}.label{font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted)}
+.scene{position:relative;min-height:355px;background:linear-gradient(to bottom,#0d1a28 0 58%,#111820 58% 100%);overflow:hidden}.skyglow{position:absolute;inset:-30% 10% 45%;background:radial-gradient(ellipse,rgba(102,183,255,.11),transparent 65%)}.platform{position:absolute;left:5%;right:5%;bottom:69px;height:66px;border-top:1px solid rgba(210,230,255,.22);background:linear-gradient(rgba(63,77,92,.25),rgba(19,25,32,.9))}.track{position:absolute;left:0;right:0;bottom:46px;height:10px;border-top:2px solid #64717f;border-bottom:2px solid #64717f}.track:after{content:"";position:absolute;inset:-8px 0;background:repeating-linear-gradient(90deg,transparent 0 34px,rgba(125,137,148,.65) 34px 39px,transparent 39px 56px);transform:skewX(-8deg)}
+.train{position:absolute;bottom:88px;width:230px;height:74px;border:1px solid rgba(176,217,255,.42);border-radius:18px 28px 8px 8px;background:linear-gradient(160deg,#385572,#142435 58%,#0b1118);box-shadow:0 12px 30px rgba(0,0,0,.45),0 0 24px rgba(116,195,255,.12);transition:left .55s cubic-bezier(.2,.75,.25,1),opacity .4s}.train:before{content:"";position:absolute;left:24px;right:24px;top:15px;height:22px;border-radius:8px;background:linear-gradient(90deg,#86bedc 0 27%,#0b1823 27% 32%,#86bedc 32% 61%,#0b1823 61% 66%,#86bedc 66%);opacity:.66}.door{position:absolute;right:48px;bottom:0;width:38px;height:52px;border:1px solid rgba(206,232,255,.36);border-radius:5px 5px 0 0;background:#142b3d;transition:transform .3s,box-shadow .3s}.door.open{transform:translateX(27px);box-shadow:-28px 0 0 rgba(9,14,19,.85)}.person{position:absolute;bottom:136px;width:20px;height:42px;border-radius:10px 10px 4px 4px;background:linear-gradient(#e5efff,#788ba5);box-shadow:0 0 14px rgba(210,232,255,.12);transition:left .5s,opacity .3s}.person:before{content:"";position:absolute;width:15px;height:15px;border-radius:50%;top:-13px;left:2.5px;background:#d9bf9e}.alarm{position:absolute;right:7%;top:40px;width:18px;height:18px;border-radius:50%;background:#41252a;border:2px solid #774149}.alarm.on{background:#ff6772;box-shadow:0 0 8px #ff6772,0 0 28px rgba(255,80,90,.55)}.guard{position:absolute;right:12%;bottom:138px;font-size:28px;filter:grayscale(.5);opacity:.45}.guard.active{filter:none;opacity:1}.obstruction{position:absolute;left:54%;bottom:126px;width:48px;height:4px;background:var(--warn);box-shadow:0 0 18px rgba(255,204,118,.7);opacity:0;transition:opacity .2s}.obstruction.on{opacity:1}
+.hud{position:absolute;left:16px;top:16px;display:flex;gap:8px;flex-wrap:wrap}.chip{font-size:11px;color:#cfe2ff;border:1px solid rgba(186,214,255,.18);background:rgba(8,13,20,.62);border-radius:999px;padding:7px 9px;backdrop-filter:blur(10px)}.hash{position:absolute;left:16px;right:16px;bottom:11px;color:#6f839e;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.controls{border-top:1px solid var(--line);padding:14px 16px 16px}.row{display:flex;align-items:center;gap:9px}.row button,.filebtn{border:1px solid rgba(181,213,255,.22);background:rgba(17,28,41,.82);color:var(--text);border-radius:10px;padding:9px 12px;cursor:pointer}.row button:hover,.filebtn:hover{border-color:rgba(157,215,255,.5)}input[type=range]{width:100%;accent-color:#9dd7ff}.counter{font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted);min-width:72px;text-align:right}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.stat{padding:12px;border:1px solid rgba(180,210,255,.12);border-radius:12px;background:rgba(5,10,16,.38)}.value{font-size:16px;font-weight:720;margin-top:5px;word-break:break-word}.small{font-size:11px;color:var(--muted);line-height:1.5}.event{margin-top:12px;padding:13px;border-radius:12px;border:1px solid rgba(157,215,255,.16);background:rgba(16,28,41,.48)}.eventName{font-weight:720;margin-top:5px}.empty{min-height:250px;display:grid;place-items:center;text-align:center;padding:28px;color:var(--muted)}.empty strong{display:block;color:var(--text);margin-bottom:7px}.filebtn input{display:none}.notice{margin-top:12px;font-size:11px;color:var(--muted);line-height:1.55;padding:12px;border-left:2px solid rgba(255,204,118,.45);background:rgba(255,204,118,.04)}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="top">
+    <div class="brand"><div class="mark">AX</div><div><div class="title">Causal Loop Observer</div><div class="sub">A window over receipts, never an authority over state.</div></div></div>
+    <div class="badge">Observer only · non-authoritative</div>
+  </div>
+  <div class="grid">
+    <section class="card">
+      <div id="sceneEmpty" class="empty"><div><strong>No receipt loaded</strong>Generate a run receipt, then load its JSON here.<br><br><label class="filebtn">Load receipt JSON<input id="file" type="file" accept="application/json,.json"></label></div></div>
+      <div id="scene" class="scene" hidden>
+        <div class="skyglow"></div><div class="hud"><div class="chip" id="waveChip">wave</div><div class="chip" id="sourceChip">source</div></div>
+        <div id="alarm" class="alarm"></div><div id="guard" class="guard">🛡️</div><div class="platform"></div><div class="track"></div>
+        <div id="train" class="train"><div id="door" class="door"></div></div><div id="person" class="person"></div><div id="obstruction" class="obstruction"></div><div id="frameHash" class="hash"></div>
+      </div>
+      <div id="controls" class="controls" hidden>
+        <div class="row"><button id="prev" aria-label="Previous frame">◀</button><button id="play">Play</button><button id="next" aria-label="Next frame">▶</button><input id="range" type="range" min="0" max="0" value="0"><div id="counter" class="counter">0 / 0</div></div>
+      </div>
+    </section>
+    <aside class="card pad">
+      <div class="label">Receipt</div><div id="runId" class="value">Not loaded</div><div id="receiptHash" class="small" style="margin-top:6px"></div>
+      <div class="stats">
+        <div class="stat"><div class="label">Train</div><div id="trainState" class="value">—</div></div>
+        <div class="stat"><div class="label">Door</div><div id="doorState" class="value">—</div></div>
+        <div class="stat"><div class="label">Passenger</div><div id="passengerState" class="value">—</div></div>
+        <div class="stat"><div class="label">Delay</div><div id="delay" class="value">—</div></div>
+      </div>
+      <div class="event"><div class="label">Observed causal frame</div><div id="eventName" class="eventName">—</div><div id="eventMeta" class="small" style="margin-top:5px">—</div></div>
+      <div class="notice">This page does not run modules, decide consequences, or write canonical state. It only groups and displays writes already present in a run receipt. Python-side observer validation remains the evidence gate for hashes.</div>
+      <div style="margin-top:14px"><label class="filebtn">Load another receipt<input id="file2" type="file" accept="application/json,.json"></label></div>
+    </aside>
+  </div>
+</div>
+<script>
+const $=id=>document.getElementById(id);let frames=[],receipt=null,index=0,timer=null;
+function clone(v){return JSON.parse(JSON.stringify(v))}
+function buildFrames(r){
+  if(!r||!r.startState||!Array.isArray(r.stateTransitions))throw new Error('Not a causal-loop run receipt');
+  let state=clone(r.startState),out=[{kind:'start',wave:null,sources:['START'],state:clone(state),stateHash:r.startStateHash||''}],i=0,t=r.stateTransitions;
+  while(i<t.length){let x=t[i];if(x.kind==='external'){Object.assign(state,clone(x.writes||{}));out.push({kind:'external',wave:x.wave,sources:[x.source||'external'],state:clone(state),stateHash:x.stateHash||''});i++;continue}
+    if(x.kind==='module'){let wave=x.wave,merged={},sources=[],hash='';while(i<t.length&&t[i].kind==='module'&&t[i].wave===wave){let y=t[i++];sources.push(y.source||'module');Object.entries(y.writes||{}).forEach(([k,v])=>{if(k in merged&&JSON.stringify(merged[k])!==JSON.stringify(v))throw new Error('Contradictory writes in receipt wave');merged[k]=clone(v)});hash=y.stateHash||hash}Object.assign(state,merged);out.push({kind:'wave',wave,sources,state:clone(state),stateHash:hash});continue}
+    throw new Error('Unsupported transition kind: '+x.kind)
+  }return out
+}
+function trainLeft(s){return s==='approaching'?'8%':s==='arrived'?'39%':'78%'}
+function render(){if(!frames.length)return;let f=frames[index],s=f.state||{};$('range').value=index;$('counter').textContent=`${index+1} / ${frames.length}`;$('waveChip').textContent=f.wave==null?'START':`WAVE ${f.wave}`;$('sourceChip').textContent=f.kind==='wave'?`${f.sources.length} MODULE${f.sources.length===1?'':'S'}`:f.sources.join(' · ');$('frameHash').textContent=f.stateHash||'state hash unavailable';$('train').style.left=trainLeft(s['train.status']);$('train').style.opacity=s['train.status']==='departed'?'.55':'1';$('door').classList.toggle('open',s['door.state']==='open');$('person').style.left=s['passenger.state']==='waiting'?'18%':s['passenger.state']==='at_door'?'50%':'55%';$('person').style.opacity=s['passenger.state']==='boarded'?'0':'1';$('alarm').classList.toggle('on',!!s['alarm.active']);$('guard').classList.toggle('active',s['guard.state']!=='idle');$('obstruction').classList.toggle('on',!!s['platform.obstructed']);$('trainState').textContent=s['train.status']??'—';$('doorState').textContent=s['door.state']??'—';$('passengerState').textContent=s['passenger.state']??'—';$('delay').textContent=String(s['train.departureDelay']??'—');$('eventName').textContent=f.sources.join(' + ');$('eventMeta').textContent=f.kind==='start'?'Initial authoritative state':`${f.kind} · causal wave ${f.wave}`}
+function stop(){if(timer){clearInterval(timer);timer=null}$('play').textContent='Play'}
+function play(){if(timer){stop();return}$('play').textContent='Pause';timer=setInterval(()=>{if(index>=frames.length-1){stop();return}index++;render()},750)}
+function loadFile(file){if(!file)return;let reader=new FileReader();reader.onload=()=>{try{let r=JSON.parse(reader.result);let built=buildFrames(r);receipt=r;frames=built;index=0;stop();$('sceneEmpty').hidden=true;$('scene').hidden=false;$('controls').hidden=false;$('range').max=Math.max(0,frames.length-1);$('runId').textContent=r.runId||'unknown run';$('receiptHash').textContent=r.receiptHash?`receipt ${r.receiptHash}`:'receipt hash unavailable';render()}catch(err){alert('Observer could not read this receipt: '+err.message)}};reader.readAsText(file)}
+$('file').addEventListener('change',e=>loadFile(e.target.files[0]));$('file2').addEventListener('change',e=>loadFile(e.target.files[0]));$('prev').onclick=()=>{stop();index=Math.max(0,index-1);render()};$('next').onclick=()=>{stop();index=Math.min(frames.length-1,index+1);render()};$('play').onclick=play;$('range').oninput=e=>{stop();index=Number(e.target.value);render()};
+</script>
+</body>
+</html>

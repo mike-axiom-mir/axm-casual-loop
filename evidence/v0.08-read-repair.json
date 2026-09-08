@@ -1,0 +1,41 @@
+{
+  "schema": "axm.causal-loop.read-scope-repair/v0.08",
+  "sourceHead": "b68da4757a565607073a48b4a896f2709e1e9bb1",
+  "workflowRunId": 33333815854,
+  "testCount": 49,
+  "atlasHash": "e55db1ad546a3e6006c2cba8b6245b69a3368035c5e94febe8c85575ba854ec4",
+  "before": {
+    "evidence": "evidence/v0.08-read-detection.json",
+    "caseCount": 208,
+    "convergedCount": 63,
+    "failedCount": 145,
+    "readViolationCaseCount": 145,
+    "failuresByReason": {"read_scope_violation": 145}
+  },
+  "after": {
+    "caseCount": 208,
+    "convergedCount": 208,
+    "failedCount": 0,
+    "uniqueRealizedPathCount": 183,
+    "uniqueEndStateCount": 9,
+    "deterministicMismatchCount": 0,
+    "hardInvariantFailureCaseCount": 0,
+    "contradictionCaseCount": 0,
+    "authorityViolationCaseCount": 0,
+    "readViolationCaseCount": 0,
+    "orphanExternalWriteKeys": [],
+    "unresolvedExternalWriteKeys": [],
+    "failuresByReason": {}
+  },
+  "repair": {
+    "moduleId": "09-guard-investigate",
+    "declaredReadsAdded": ["player.blockingDoor", "player.triggerAlarm"],
+    "gateKeptStrict": true
+  },
+  "interpretation": [
+    "The repair declared the state dependencies the guard was already using instead of restoring whole-state module access.",
+    "Predicates and transitions remain restricted to declared reads and out-of-contract access still fails deterministically.",
+    "The repaired scene passed the full bounded Atlas and all prior replay, checkpoint, observer, repeat-action, and authority regressions."
+  ],
+  "claimBoundary": "This proves read-contract enforcement for module predicate/transition access in the current in-process executor. It is not a process-level security sandbox."
+}

@@ -1,0 +1,31 @@
+{
+  "schema": "axm.causal-loop.intervention-authority-gap/v0.09",
+  "status": "open-gap",
+  "scope": "generic CausalLoopEngine intervention handler",
+  "finding": {
+    "engineCurrentlyAcceptsArbitraryInterventionWrites": true,
+    "canReachHardEndWithoutModuleActivation": true,
+    "exampleAction": "FINISH_WORLD",
+    "exampleAuthoritativeWrite": "world.finished=true"
+  },
+  "trainScene": {
+    "currentHandlerRestrictedByImplementation": true,
+    "directionKeys": [
+      "player.blockingDoor",
+      "player.triggerAlarm",
+      "player.talkingToPassenger"
+    ],
+    "engineEnforced": false
+  },
+  "requiredRepair": {
+    "location": "generic executor boundary",
+    "rule": "external actors may inject declared direction keys only; authoritative consequences must be derived by causal modules",
+    "receiptRequirement": "rejected handler writes must be explicit and deterministic rather than silently filtered",
+    "doNotSolveBy": [
+      "loosening module authority scopes",
+      "silently dropping unauthorized writes",
+      "trusting each scene handler by convention"
+    ]
+  },
+  "claimBoundary": "The train-platform handler follows the direction-only convention today, but the executor does not yet enforce that convention for arbitrary LoopSpec handlers."
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "axm.causal-loop.repeat-action-repair/v0.06",
+  "sourceHead": "da64b42360fbf4448e356a6706719ac10dd1b828",
+  "workflowRunId": 33333334160,
+  "testCount": 39,
+  "atlasHash": "c267d864d8ee5981c05f3340610e4abbc23258df322484ba09bcdeda2060574f",
+  "before": {
+    "evidence": "evidence/v0.06-repeat-detection.json",
+    "atlasHash": "3c187f9ac63736771afd9f76e5f0e985da4f53575e3cc4459575ddc8274bbf5a",
+    "caseCount": 208,
+    "convergedCount": 193,
+    "failedCount": 15,
+    "failuresByReason": {"no_relevant_module": 15},
+    "unresolvedExternalWriteKeys": ["player.blockingDoor", "player.triggerAlarm"]
+  },
+  "after": {
+    "caseCount": 208,
+    "convergedCount": 208,
+    "failedCount": 0,
+    "uniqueRealizedPathCount": 183,
+    "uniqueEndStateCount": 9,
+    "deterministicMismatchCount": 0,
+    "hardInvariantFailureCaseCount": 0,
+    "contradictionCaseCount": 0,
+    "orphanExternalWriteKeys": [],
+    "unresolvedExternalWriteKeys": [],
+    "failuresByReason": {}
+  },
+  "repairs": [
+    "Obstruction activation now depends on the current obstruction state rather than an ever-observed flag, allowing a later resolved obstruction to occur again.",
+    "Alarm activation now depends on the current alarm state rather than an ever-observed flag, allowing a later cleared alarm to be triggered again.",
+    "Block delay accumulates by one for each separately realized obstruction incident.",
+    "Alarm delay accumulates by two for each separately realized alarm incident.",
+    "Same-state duplicate external direction remains naturally idempotent because the second write changes no canonical state."
+  ],
+  "interpretation": [
+    "The expanded repeated-action probe no longer exposes one-shot module behavior within its 208 bounded schedules.",
+    "The repair increased module reusability while preserving deterministic receipts and convergence checks.",
+    "This remains bounded evidence, not proof that arbitrary repetition or larger loop spaces are complete."
+  ]
+}

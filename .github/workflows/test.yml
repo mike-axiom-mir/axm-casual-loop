@@ -1,0 +1,27 @@
+name: deterministic-proof
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run deterministic proof tests
+        run: python -m unittest discover -s tests -v
+      - name: Export observer demo receipt
+        if: always()
+        run: python scripts/export_demo_receipt.py --output /tmp/axm-causal-loop-demo-receipt.json
+      - name: Generate bounded causal atlas
+        if: always()
+        run: python scripts/generate_atlas.py --output /tmp/v0.08-causal-atlas.json

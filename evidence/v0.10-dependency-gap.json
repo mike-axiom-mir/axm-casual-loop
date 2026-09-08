@@ -1,0 +1,39 @@
+{
+  "schema": "axm.causal-loop.dependency-gap/v0.10",
+  "status": "open-gap",
+  "scope": "Module.dependencies in the generic CausalLoopEngine",
+  "finding": {
+    "dependencyFieldIncludedInModuleContract": true,
+    "dependencyFieldAffectsEngineSignature": true,
+    "dependencyFieldCurrentlyGatesExecution": false,
+    "dependentCanActivateBeforePrerequisite": true,
+    "unknownDependencyIdsAreRejected": false
+  },
+  "detectionCases": [
+    {
+      "case": "registered prerequisite never activates",
+      "declaredDependency": "prerequisite",
+      "observed": "dependent activates and reaches hard end anyway"
+    },
+    {
+      "case": "dependency id does not exist",
+      "declaredDependency": "does-not-exist",
+      "observed": "engine construction and dependent activation still succeed"
+    }
+  ],
+  "requiredRepair": {
+    "rule": "dependencies must be validated module IDs and a dependent module may execute only after all declared prerequisites have activated in an earlier committed causal wave",
+    "failureReceipt": "if a causally relevant dependent is blocked and no executable module can make progress, fail explicitly as unsatisfied_dependencies",
+    "staticValidation": [
+      "reject missing dependency ids",
+      "reject self dependency",
+      "reject dependency cycles"
+    ],
+    "doNotSolveBy": [
+      "silently ignoring missing dependencies",
+      "treating registration as equivalent to activation",
+      "letting same-wave completion order satisfy a dependency"
+    ]
+  },
+  "claimBoundary": "This evidence only demonstrates that Module.dependencies is descriptive metadata in the current executor. It does not yet establish the correct dependency semantics for arbitrary causal systems."
+}

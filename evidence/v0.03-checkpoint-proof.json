@@ -1,0 +1,27 @@
+{
+  "checkpoint": {
+    "afterWaves": 2,
+    "appliedTimedInfluencesBeforePause": [],
+    "checkpointHash": "d922c24c51b33a91cd45221130ef3ab0224c512be4a4cc743c0a52fea375fecf",
+    "sameCheckpointHashOnRepeat": true,
+    "stateHash": "02417b5ab3ab3c79dc9a0ca76d3f98c3732fe7460c5544166af159599f888c40"
+  },
+  "resumeEquivalence": {
+    "departureDelay": 3,
+    "sameConvergencePath": true,
+    "sameEndStateHash": true,
+    "sameReceiptHash": true,
+    "sameRunId": true,
+    "sameStateTransitions": true,
+    "status": "converged"
+  },
+  "schema": "axm.causal-loop.v0.03-checkpoint-proof/v1",
+  "testCommand": "python -m unittest discover -s tests -v",
+  "testCount": 30,
+  "timedBaseline": {
+    "differentEndStateHash": true,
+    "sameAction": "BLOCK_DOOR",
+    "wave2Delay": 1,
+    "wave4Delay": 0
+  }
+}
