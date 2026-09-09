@@ -1,0 +1,53 @@
+name: process-adapter
+
+on:
+  push:
+    paths:
+      - "causal_loop/process_adapter.py"
+      - "scripts/causal_loop_ndjson.py"
+      - "capabilities/causal-loop-process-v1.json"
+      - "examples/process-requests.ndjson"
+      - "tests/test_process_adapter.py"
+      - ".github/workflows/process-adapter.yml"
+  pull_request:
+    paths:
+      - "causal_loop/process_adapter.py"
+      - "scripts/causal_loop_ndjson.py"
+      - "capabilities/causal-loop-process-v1.json"
+      - "examples/process-requests.ndjson"
+      - "tests/test_process_adapter.py"
+      - ".github/workflows/process-adapter.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run complete deterministic suite
+        run: python -m unittest discover -s tests -v
+      - name: Exercise process adapter from outside the checkout
+        working-directory: ${{ runner.temp }}
+        run: python "$GITHUB_WORKSPACE/scripts/causal_loop_ndjson.py" < "$GITHUB_WORKSPACE/examples/process-requests.ndjson" > responses.ndjson
+      - name: Validate canonical NDJSON responses
+        working-directory: ${{ runner.temp }}
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          lines = Path("responses.ndjson").read_text(encoding="utf-8").splitlines()
+          responses = [json.loads(line) for line in lines]
+          assert len(responses) == 2
+          assert all(response["status"] == "PASS" for response in responses)
+          assert responses[1]["replayMatches"] is True
+          PY

@@ -1,0 +1,2 @@
+{"op":"describe","requestId":"discover-1","schema":"axm.causal-loop.process-request/v1"}
+{"maxWaves":64,"op":"run","requestId":"run-1","schema":"axm.causal-loop.process-request/v1","timedInfluences":[{"action":"BLOCK_DOOR","atWave":2},{"action":"TRIGGER_ALARM","atWave":3}]}
