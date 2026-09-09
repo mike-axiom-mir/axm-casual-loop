@@ -1,7 +1,9 @@
 {
   "schema": "axm.causal-loop.nested-read-repair/v0.12",
-  "status": "repaired-locally",
+  "status": "verified",
   "baseHead": "71df68a6a506abffad92eacb01f8e3b62541c20b",
+  "workflowRunId": 34392579071,
+  "remotePython": "3.11",
   "before": {
     "detectionEvidence": "evidence/v0.12-nested-read-gap.json",
     "focusedResult": "0/2 passed",
