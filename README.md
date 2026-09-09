@@ -14,7 +14,7 @@ Current capabilities:
 - timed external interventions with scheduled/applied/unapplied receipt separation
 - deterministic hashes and exact replay
 - cycle, contradiction, event-budget, dependency, convergence-evidence, and explicit convergence failures
-- deterministic pause/checkpoint/resume without replaying the completed prefix
+- deterministic pause/checkpoint/resume with exact causal-prefix replay before admission
 - commit-gated persistent history
 - a self-contained local receipt observer with no causal authority or network dependency
 - bounded Causal Atlas exploration across single, paired, reversed-same-wave, and repeated actions
@@ -124,7 +124,9 @@ start
  -> convergence
 ```
 
-Checkpoint state, run identity, loop identity, engine signature, dependency policy, required convergence effects, and realized convergence evidence are validated before continuation.
+Checkpoint state, run identity, loop identity, engine signature, dependency policy, required convergence effects, and realized convergence evidence are validated before continuation. The declared start state, timed inputs, wave depth, and engine contract are also replayed to the checkpoint boundary. Resume accepts the checkpoint only when the complete derived prefix—including state, transitions, activations, applied inputs, convergence path, cycle keys, and execution metadata—matches exactly. Recomputing a checkpoint hash after changing that prefix is therefore insufficient for admission.
+
+Prefix admission is deterministic integrity verification, not producer authentication. Its cost is linear in completed checkpoint depth because the prefix is intentionally reconstructed before continuation.
 
 ## Observer glass, not a second engine
 
@@ -152,6 +154,8 @@ Latest summaries:
 
 - `evidence/v0.10-dependency-repair.json`
 - `evidence/v0.11-convergence-effect-repair.json`
+- `evidence/v0.12-checkpoint-prefix-gap.json`
+- `evidence/v0.12-checkpoint-prefix-repair.json`
 
 ## Claim boundary
 

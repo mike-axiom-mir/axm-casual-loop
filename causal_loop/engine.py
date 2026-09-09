@@ -198,7 +198,30 @@ class CausalLoopEngine(_v07.CausalLoopEngine):
         expected_realized = self._realized_effects(context)
         if checkpoint.get("realizedConvergenceEffects") != expected_realized:
             raise ValueError("checkpoint realized convergence effects mismatch")
+        self._verify_checkpoint_prefix(checkpoint)
         return context
+
+    def _verify_checkpoint_prefix(self, checkpoint: Mapping[str, Any]) -> None:
+        """Require the saved prefix to equal deterministic execution from its inputs.
+
+        A checkpoint hash protects bytes against accidental drift, but a caller can
+        recompute that hash after changing state or retained execution evidence. Replay
+        makes the checkpoint's declared start, schedule, and causal depth the authority
+        for reconstructing every derived prefix field before resume can continue it.
+        """
+
+        try:
+            replayed = self.pause(
+                checkpoint["startState"],
+                timed_influences=checkpoint["timedExternalInfluences"],
+                after_waves=checkpoint["wavesExecuted"],
+                max_waves=checkpoint["maxWaves"],
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError("checkpoint causal prefix cannot be replayed") from exc
+
+        if replayed != dict(checkpoint):
+            raise ValueError("checkpoint causal prefix mismatch")
 
     def _receipt(self, context: Mapping[str, Any], *, commit: bool) -> dict[str, Any]:
         receipt = super()._receipt(context, commit=commit)

@@ -1,0 +1,16 @@
+{
+  "schema": "axm.causal-loop.evidence/v0.01",
+  "subject": "checkpoint causal-prefix admission before replay validation",
+  "baseCommit": "f5ba8b45a3cd04b3e76018fa34b91be2be1da458",
+  "observed": {
+    "checkpointWaves": 2,
+    "mutation": "changed platform.announcement without changing retained transitions",
+    "resealedStateHash": true,
+    "resealedCheckpointHash": true,
+    "resumeAccepted": true,
+    "resultStatus": "converged",
+    "forgedValueSurvived": true,
+    "acceptedReceiptHash": "c9340826dfca95f22fd0039ac9903b0fcd55021f0b8d16a6ba465b074759c058"
+  },
+  "claimBoundary": "This reproduces deterministic acceptance of one self-consistent but causally impossible checkpoint. It is not an authorship or adversarial-code claim."
+}
