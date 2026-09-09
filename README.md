@@ -4,13 +4,13 @@ A source-honest prototype for testing whether a bounded deterministic loop can k
 
 ## Status
 
-**v0.11 deterministic-contract proof harness. Not a game engine, movie engine, VR engine, or general simulation claim.**
+**v0.12 deterministic-contract proof harness. Not a game engine, movie engine, VR engine, or general simulation claim.**
 
 The current prototype is one deterministic `TRAIN PLATFORM LOOP`. Its hard boundary is simple: the train approaches, causal events unfold, and the train eventually leaves. The interior can change through timed external direction while canonical consequences remain derived by deterministic modules.
 
 Current capabilities:
 
-- atomic module waves from one frozen state snapshot
+- atomic module waves from one frozen state snapshot, with transitively detached module reads
 - timed external interventions with scheduled/applied/unapplied receipt separation
 - deterministic hashes and exact replay
 - cycle, contradiction, event-budget, dependency, convergence-evidence, and explicit convergence failures
@@ -28,7 +28,7 @@ Current capabilities:
 
 GitHub Actions currently verifies:
 
-- **74/74 tests passing**
+- **76/76 tests passing**
 - **208/208 bounded Atlas schedules converging**
 - **183 unique realized causal paths**
 - **9 unique endpoint states**
@@ -43,7 +43,7 @@ GitHub Actions currently verifies:
 Current Atlas hash:
 
 ```text
-22c3eb2e40d2d188824b48aaaa14be635dfc35bf569997d56c3540a8d1070ef7
+98de52ab4b13614191a8af71a818f4c11f90f56deaccf012a0a7fdf8a58fd915
 ```
 
 ## Direction is not consequence authority
@@ -59,6 +59,17 @@ TALK_TO_PASSENGER
 The intervention boundary only permits the corresponding direction-state keys. It cannot directly write consequences such as train delay or departure state. Causal modules must derive those consequences from canonical state.
 
 A rejected external consequence write fails explicitly with `intervention_scope_violation` before canonical state changes.
+
+## Frozen reads are transitively isolated
+
+Declared reads are not merely protected at the top-level mapping. Every value returned to a
+module predicate or transition is a detached copy, including nested mappings and sequences.
+A module therefore cannot mutate the shared wave snapshot through a nested reference and
+covertly influence another module outside its declared write authority.
+
+The red behavior is preserved in `evidence/v0.12-nested-read-gap.json`. The pre-isolation
+v0.05 executor remains in `causal_loop/engine_legacy.py`; current v0.06-and-later execution
+binds the `declared-transitively-detached/v0.01` policy into the engine signature.
 
 ## Dependencies are causal
 
@@ -146,16 +157,17 @@ Open `observer/index.html` locally and load the generated demo receipt to inspec
 
 ## Evidence trail
 
-The repo intentionally preserves useful red states instead of rewriting history. Detection and repair evidence includes timing, causal debt, repeated incidents, module write authority, module read contracts, external intervention authority, dependency enforcement, and convergence-effect enforcement.
+The repo intentionally preserves useful red states instead of rewriting history. Detection and repair evidence includes timing, causal debt, repeated incidents, module write authority, module read contracts, nested read isolation, external intervention authority, dependency enforcement, and convergence-effect enforcement.
 
 Latest summaries:
 
 - `evidence/v0.10-dependency-repair.json`
 - `evidence/v0.11-convergence-effect-repair.json`
+- `evidence/v0.12-nested-read-repair.json`
 
 ## Claim boundary
 
-The proof remains deliberately narrow. It supports the claim that this bounded deterministic scene can vary its causal interior under timed direction while replay, checkpoints, presentation boundaries, declared read/write authority, external direction scope, simple prior-activation dependencies, and required committed convergence evidence remain explicit and testable.
+The proof remains deliberately narrow. It supports the claim that this bounded deterministic scene can vary its causal interior under timed direction while replay, checkpoints, presentation boundaries, transitively isolated declared reads, write authority, external direction scope, simple prior-activation dependencies, and required committed convergence evidence remain explicit and testable.
 
 It does **not** prove that large loop spaces are cheap, that arbitrary wall-clock concurrency is deterministic, that arbitrary games/movies/VR can be compiled into this form, that automatic generation will be compelling, or that this architecture outperforms established engines.
 

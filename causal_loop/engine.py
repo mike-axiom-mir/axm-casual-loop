@@ -17,6 +17,7 @@ TimedInfluence = _v07.TimedInfluence
 Module = _v07.Module
 Invariant = _v07.Invariant
 DEPENDENCY_POLICY = _v07.DEPENDENCY_POLICY
+MODULE_READ_POLICY = _v07.MODULE_READ_POLICY
 
 CONVERGENCE_EFFECT_POLICY = "required-committed-effects/v0.01"
 
@@ -88,6 +89,7 @@ class CausalLoopEngine(_v07.CausalLoopEngine):
                 "loopVersion": self.spec.version,
                 "receiptSchema": self.spec.receipt_schema,
                 "interventionWriteScope": list(self.spec.intervention_write_scope),
+                "moduleReadPolicy": MODULE_READ_POLICY,
                 "dependencyPolicy": DEPENDENCY_POLICY,
                 "convergenceEffectPolicy": CONVERGENCE_EFFECT_POLICY,
                 "requiredConvergenceEffects": list(self.spec.required_convergence_effects),
