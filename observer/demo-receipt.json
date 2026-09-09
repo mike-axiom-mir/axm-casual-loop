@@ -1,0 +1,359 @@
+{
+  "appliedTimedInfluences": [
+    {
+      "action": "BLOCK_DOOR",
+      "atWave": 2,
+      "sequence": 0,
+      "writes": {
+        "player.blockingDoor": true
+      }
+    },
+    {
+      "action": "TRIGGER_ALARM",
+      "atWave": 3,
+      "sequence": 1,
+      "writes": {
+        "player.triggerAlarm": true
+      }
+    }
+  ],
+  "authorityViolations": [],
+  "committed": false,
+  "contradictions": [],
+  "convergenceEffectBlocks": [],
+  "convergenceEffectPolicy": "required-committed-effects/v0.01",
+  "convergencePath": [
+    "cdcc4dc525ab09fdecf2a44990a06f73a29aae52f8a24b6bdb1a8cfc67eceaec",
+    "97af7124fe625a9f64606e142afc47529e9b88d0ca47b15f9b041049b76f9a82",
+    "f25d269b7ab339f09a6035b8ed564cc69b6fdc67b583761980f7eb3573ee9694",
+    "4748a2f7738c80f6aed0ef742af76191ed52dc340e6052d53adc8a3af86467c0",
+    "0651463f653c9973d70de03788c0314235373f6eea78533d05cda3c96a35ab20",
+    "73ea4d8a9306895cf19a99205c69fa93910478e22232b2d531cbc84e8f339a0f",
+    "c4a87221c75e89ac7eec333b99f0dc816f72395bd96900ea3a192d9b37da897a",
+    "b8ad6c85633cdda42fd957304792a05286ee2c6d4f5b1feb2539ab04617b3948",
+    "0a7cc27b5fe028c2e79fe6a4fc52aaeb9220a30d677cc81e62cf8561f6f1fc81",
+    "01b7fa3f90afbfa2c4f097ae17bd36979ed26efa83ab8ec875a76dfd6567f7e6",
+    "0ff4b39305b54ffe497beb5f7b66379c4f2ad2859d5e19b33791f2eb374e07af"
+  ],
+  "convergenceRequirementsPassed": true,
+  "dependencyBlocks": [],
+  "dependencyPolicy": "all-prior-activation/v0.01",
+  "endState": {
+    "alarm.active": false,
+    "delay.alarm": 2,
+    "delay.block": 1,
+    "door.state": "closed",
+    "flags.alarmObserved": true,
+    "flags.arrived": true,
+    "flags.conversationObserved": false,
+    "flags.doorClosed": true,
+    "flags.doorOpened": true,
+    "flags.guardResolved": true,
+    "flags.obstructionObserved": true,
+    "flags.passengerApproached": true,
+    "flags.passengerBoarded": true,
+    "guard.state": "resolved_incident",
+    "passenger.state": "boarded",
+    "passenger.talkedTo": false,
+    "platform.obstructed": false,
+    "player.blockingDoor": false,
+    "player.talkingToPassenger": false,
+    "player.triggerAlarm": false,
+    "train.departureDelay": 3,
+    "train.status": "departed",
+    "weather.snow": "none"
+  },
+  "endStateHash": "0ff4b39305b54ffe497beb5f7b66379c4f2ad2859d5e19b33791f2eb374e07af",
+  "failureReason": null,
+  "headless": true,
+  "historyEffects": [],
+  "interventionAuthorityViolations": [],
+  "interventionWriteScope": [
+    "player.blockingDoor",
+    "player.triggerAlarm",
+    "player.talkingToPassenger"
+  ],
+  "invariantResults": [
+    {
+      "id": "train_approaches_station",
+      "kind": "start",
+      "passed": true
+    },
+    {
+      "id": "known_train_state",
+      "kind": "hard",
+      "passed": true
+    },
+    {
+      "id": "nonnegative_delay",
+      "kind": "hard",
+      "passed": true
+    },
+    {
+      "id": "departure_has_no_causal_debt",
+      "kind": "hard",
+      "passed": true
+    },
+    {
+      "id": "train_eventually_leaves",
+      "kind": "hard_end",
+      "passed": true
+    },
+    {
+      "id": "on_time_departure",
+      "kind": "soft",
+      "passed": false
+    }
+  ],
+  "loopId": "axm.train-platform-loop/v0.01",
+  "loopVersion": "0.08",
+  "missingConvergenceEffects": [],
+  "modulesActivated": [
+    "01-train-arrive",
+    "02-door-open",
+    "03-passenger-approach",
+    "04-obstruction",
+    "05-alarm-trigger",
+    "06-block-delay",
+    "09-guard-investigate",
+    "07-alarm-delay",
+    "08-delay-derive",
+    "09-guard-investigate",
+    "08-delay-derive",
+    "10-passenger-board",
+    "11-door-close",
+    "12-train-depart"
+  ],
+  "orderedExternalInfluences": [
+    "BLOCK_DOOR",
+    "TRIGGER_ALARM"
+  ],
+  "rawEndInvariantPassed": true,
+  "readViolations": [],
+  "realizedConvergenceEffects": [
+    "train_departed"
+  ],
+  "receiptHash": "2e17b52706b502e7543841fc83551a3c46b32d4e24571408bea99423162041cd",
+  "requiredConvergenceEffects": [
+    "train_departed"
+  ],
+  "resourceUsage": {
+    "authorityViolationCount": 0,
+    "causalDepth": 8,
+    "contradictionCount": 0,
+    "convergenceSteps": 10,
+    "cpuTimeNs": null,
+    "dependencyBlockCount": 0,
+    "externalInfluences": 2,
+    "interventionAuthorityViolationCount": 0,
+    "maxActiveWorkset": 3,
+    "missingConvergenceEffectCount": 0,
+    "moduleActivations": 14,
+    "modulesAvailable": 14,
+    "readViolationCount": 0,
+    "realizedConvergenceEffectCount": 1,
+    "scheduledExternalInfluences": 2,
+    "stateTransitions": 16
+  },
+  "runId": "7fb5439a40b6856c89ef3210",
+  "schema": "axm.causal-loop.run-receipt/v0.08",
+  "startState": {
+    "alarm.active": false,
+    "delay.alarm": 0,
+    "delay.block": 0,
+    "door.state": "closed",
+    "flags.alarmObserved": false,
+    "flags.arrived": false,
+    "flags.conversationObserved": false,
+    "flags.doorClosed": false,
+    "flags.doorOpened": false,
+    "flags.guardResolved": false,
+    "flags.obstructionObserved": false,
+    "flags.passengerApproached": false,
+    "flags.passengerBoarded": false,
+    "guard.state": "idle",
+    "passenger.state": "waiting",
+    "passenger.talkedTo": false,
+    "platform.obstructed": false,
+    "player.blockingDoor": false,
+    "player.talkingToPassenger": false,
+    "player.triggerAlarm": false,
+    "train.departureDelay": 0,
+    "train.status": "approaching",
+    "weather.snow": "none"
+  },
+  "startStateHash": "cdcc4dc525ab09fdecf2a44990a06f73a29aae52f8a24b6bdb1a8cfc67eceaec",
+  "stateTransitions": [
+    {
+      "kind": "module",
+      "source": "01-train-arrive",
+      "stateHash": "97af7124fe625a9f64606e142afc47529e9b88d0ca47b15f9b041049b76f9a82",
+      "wave": 0,
+      "writes": {
+        "flags.arrived": true,
+        "train.status": "arrived"
+      }
+    },
+    {
+      "kind": "module",
+      "source": "02-door-open",
+      "stateHash": "f25d269b7ab339f09a6035b8ed564cc69b6fdc67b583761980f7eb3573ee9694",
+      "wave": 1,
+      "writes": {
+        "door.state": "open",
+        "flags.doorOpened": true
+      }
+    },
+    {
+      "kind": "module",
+      "source": "03-passenger-approach",
+      "stateHash": "f25d269b7ab339f09a6035b8ed564cc69b6fdc67b583761980f7eb3573ee9694",
+      "wave": 1,
+      "writes": {
+        "flags.passengerApproached": true,
+        "passenger.state": "at_door"
+      }
+    },
+    {
+      "kind": "external",
+      "sequence": 0,
+      "source": "BLOCK_DOOR",
+      "stateHash": "4748a2f7738c80f6aed0ef742af76191ed52dc340e6052d53adc8a3af86467c0",
+      "wave": 2,
+      "writes": {
+        "player.blockingDoor": true
+      }
+    },
+    {
+      "kind": "module",
+      "source": "04-obstruction",
+      "stateHash": "0651463f653c9973d70de03788c0314235373f6eea78533d05cda3c96a35ab20",
+      "wave": 2,
+      "writes": {
+        "flags.obstructionObserved": true,
+        "platform.obstructed": true
+      }
+    },
+    {
+      "kind": "external",
+      "sequence": 1,
+      "source": "TRIGGER_ALARM",
+      "stateHash": "73ea4d8a9306895cf19a99205c69fa93910478e22232b2d531cbc84e8f339a0f",
+      "wave": 3,
+      "writes": {
+        "player.triggerAlarm": true
+      }
+    },
+    {
+      "kind": "module",
+      "source": "05-alarm-trigger",
+      "stateHash": "c4a87221c75e89ac7eec333b99f0dc816f72395bd96900ea3a192d9b37da897a",
+      "wave": 3,
+      "writes": {
+        "alarm.active": true,
+        "flags.alarmObserved": true
+      }
+    },
+    {
+      "kind": "module",
+      "source": "06-block-delay",
+      "stateHash": "c4a87221c75e89ac7eec333b99f0dc816f72395bd96900ea3a192d9b37da897a",
+      "wave": 3,
+      "writes": {
+        "delay.block": 1
+      }
+    },
+    {
+      "kind": "module",
+      "source": "09-guard-investigate",
+      "stateHash": "c4a87221c75e89ac7eec333b99f0dc816f72395bd96900ea3a192d9b37da897a",
+      "wave": 3,
+      "writes": {
+        "flags.guardResolved": true,
+        "guard.state": "resolved_incident",
+        "platform.obstructed": false,
+        "player.blockingDoor": false
+      }
+    },
+    {
+      "kind": "module",
+      "source": "07-alarm-delay",
+      "stateHash": "b8ad6c85633cdda42fd957304792a05286ee2c6d4f5b1feb2539ab04617b3948",
+      "wave": 4,
+      "writes": {
+        "delay.alarm": 2
+      }
+    },
+    {
+      "kind": "module",
+      "source": "08-delay-derive",
+      "stateHash": "b8ad6c85633cdda42fd957304792a05286ee2c6d4f5b1feb2539ab04617b3948",
+      "wave": 4,
+      "writes": {
+        "train.departureDelay": 1
+      }
+    },
+    {
+      "kind": "module",
+      "source": "09-guard-investigate",
+      "stateHash": "b8ad6c85633cdda42fd957304792a05286ee2c6d4f5b1feb2539ab04617b3948",
+      "wave": 4,
+      "writes": {
+        "alarm.active": false,
+        "player.triggerAlarm": false
+      }
+    },
+    {
+      "kind": "module",
+      "source": "08-delay-derive",
+      "stateHash": "0a7cc27b5fe028c2e79fe6a4fc52aaeb9220a30d677cc81e62cf8561f6f1fc81",
+      "wave": 5,
+      "writes": {
+        "train.departureDelay": 3
+      }
+    },
+    {
+      "kind": "module",
+      "source": "10-passenger-board",
+      "stateHash": "0a7cc27b5fe028c2e79fe6a4fc52aaeb9220a30d677cc81e62cf8561f6f1fc81",
+      "wave": 5,
+      "writes": {
+        "flags.passengerBoarded": true,
+        "passenger.state": "boarded"
+      }
+    },
+    {
+      "kind": "module",
+      "source": "11-door-close",
+      "stateHash": "01b7fa3f90afbfa2c4f097ae17bd36979ed26efa83ab8ec875a76dfd6567f7e6",
+      "wave": 6,
+      "writes": {
+        "door.state": "closed",
+        "flags.doorClosed": true
+      }
+    },
+    {
+      "kind": "module",
+      "source": "12-train-depart",
+      "stateHash": "0ff4b39305b54ffe497beb5f7b66379c4f2ad2859d5e19b33791f2eb374e07af",
+      "wave": 7,
+      "writes": {
+        "train.status": "departed"
+      }
+    }
+  ],
+  "status": "converged",
+  "timedExternalInfluences": [
+    {
+      "action": "BLOCK_DOOR",
+      "atWave": 2,
+      "sequence": 0
+    },
+    {
+      "action": "TRIGGER_ALARM",
+      "atWave": 3,
+      "sequence": 1
+    }
+  ],
+  "unappliedTimedInfluences": []
+}
