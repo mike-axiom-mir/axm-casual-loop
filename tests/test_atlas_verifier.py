@@ -1,12 +1,21 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
 import unittest
 
 from causal_loop.atlas_verifier import verify_atlas
 from causal_loop.engine import deterministic_hash
 from causal_loop.explorer import bounded_schedule_cases, explore_schedule_space
 from causal_loop.train_platform import build_engine, initial_state
+
+
+ROOT = Path(__file__).resolve().parents[1]
+VERIFY_SCRIPT = ROOT / "scripts" / "verify_atlas.py"
 
 
 def build_small_atlas() -> tuple[dict, object]:
@@ -48,6 +57,49 @@ class AtlasVerifierTests(unittest.TestCase):
         self.assertEqual(first["atlasHash"], atlas["atlasHash"])
         self.assertEqual(first["caseCount"], 1)
         self.assertEqual(first["verificationHash"], second["verificationHash"])
+
+    def test_cli_accepts_saved_atlas_and_rejects_tamper(self) -> None:
+        atlas, engine = build_small_atlas()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            atlas_path = Path(temp_dir) / "atlas.json"
+            atlas_path.write_text(json.dumps(atlas), encoding="utf-8")
+            command = [
+                sys.executable,
+                str(VERIFY_SCRIPT),
+                str(atlas_path),
+                "--engine-signature",
+                engine.engine_signature,
+                "--loop-id",
+                engine.spec.loop_id,
+                "--loop-version",
+                engine.spec.version,
+            ]
+
+            accepted = subprocess.run(
+                command,
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(accepted.returncode, 0, accepted.stderr)
+            receipt = json.loads(accepted.stdout)
+            self.assertTrue(receipt["accepted"])
+            self.assertEqual(receipt["atlasHash"], atlas["atlasHash"])
+
+            atlas["summary"]["caseCount"] += 1
+            atlas_path.write_text(json.dumps(atlas), encoding="utf-8")
+            rejected = subprocess.run(
+                command,
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(rejected.returncode, 2)
+            refusal = json.loads(rejected.stderr)
+            self.assertFalse(refusal["accepted"])
+            self.assertIn("atlasHash", refusal["error"])
 
     def test_rejects_body_tamper_without_reseal(self) -> None:
         atlas, _ = build_small_atlas()
