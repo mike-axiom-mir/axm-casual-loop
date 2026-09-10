@@ -26,6 +26,8 @@ _RECEIPT_KEYS = {
     "planHash",
     "checkpointHash",
     "resultReceiptHash",
+    "resultStatus",
+    "resultCommitted",
     "resumeExecuted",
     "historyCommitted",
     "authority",
@@ -50,6 +52,8 @@ def _validate_result_receipt(result: Any) -> dict[str, Any]:
         raise ValueError("resume result receipt hash mismatch")
     if exact.get("committed") is not False:
         raise ValueError("checkpoint resume execution must remain uncommitted")
+    if not isinstance(exact.get("status"), str) or not exact["status"]:
+        raise ValueError("resume result status is invalid")
     return exact
 
 
@@ -80,10 +84,12 @@ def execute_checkpoint_resume(
 
     receipt_body = {
         "schema": CHECKPOINT_RESUME_EXECUTION_SCHEMA,
-        "status": "RESUMED_UNCOMMITTED",
+        "status": "RESUME_EXECUTED_UNCOMMITTED",
         "planHash": verification["planHash"],
         "checkpointHash": verification["checkpointHash"],
         "resultReceiptHash": result["receiptHash"],
+        "resultStatus": result["status"],
+        "resultCommitted": False,
         "resumeExecuted": True,
         "historyCommitted": False,
         "authority": CHECKPOINT_RESUME_EXECUTION_AUTHORITY,
@@ -137,6 +143,8 @@ def verify_checkpoint_resume_execution(
         "planHash": receipt["planHash"],
         "checkpointHash": receipt["checkpointHash"],
         "resultReceiptHash": receipt["resultReceiptHash"],
+        "resultStatus": receipt["resultStatus"],
+        "resultCommitted": False,
         "resumeExecuted": True,
         "historyCommitted": False,
         "canonical": False,

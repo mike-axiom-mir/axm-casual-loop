@@ -140,7 +140,7 @@ content-addressed checkpoint store
  -> separate history admission, if explicitly requested later
 ```
 
-`execute_checkpoint_resume()` revalidates the exact plan against the store before it calls the engine. The engine then performs its existing causal-prefix replay and continues with `commit=False`. The returned execution receipt binds the plan hash, checkpoint hash, and resulting run-receipt hash while explicitly recording that persistent history was not committed. `verify_checkpoint_resume_execution()` can independently reconstruct the same boundary; that verification deliberately repeats prefix replay and continuation work.
+`execute_checkpoint_resume()` revalidates the exact plan against the store before it calls the engine. The engine then performs its existing causal-prefix replay and continues with `commit=False`. The returned execution receipt binds the plan hash, checkpoint hash, resulting run-receipt hash, and resulting convergence/failure status while explicitly recording that neither the result nor persistent history was committed. A failed continuation remains explicit execution evidence rather than being relabeled as a successful recovery. `verify_checkpoint_resume_execution()` can independently reconstruct the same boundary; that verification deliberately repeats prefix replay and continuation work.
 
 This adapter does not choose a candidate, infer freshness, invoke persistent-history admission, or grant merge/CANON authority. The checkpoint stays canonical content-addressed evidence; inventory, plan, and execution receipts remain derived evidence around the engine's canonical run result.
 

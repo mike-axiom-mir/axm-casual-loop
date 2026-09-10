@@ -76,6 +76,39 @@ class CheckpointResumeExecutionTests(unittest.TestCase):
             )
             self.assertTrue(execution["receipt"]["resumeExecuted"])
             self.assertFalse(execution["receipt"]["historyCommitted"])
+            self.assertEqual(execution["receipt"]["resultStatus"], "converged")
+            self.assertFalse(execution["receipt"]["resultCommitted"])
+
+    def test_failed_continuation_remains_explicit_execution_evidence(self):
+        constrained_engine = build_engine()
+        constrained = constrained_engine.pause(
+            initial_state(), after_waves=1, max_waves=1
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            store = LocalCheckpointStore(directory)
+            store.save(constrained)
+            inventory = inspect_checkpoint_store(store)
+            plan = prepare_checkpoint_resume(
+                store,
+                {
+                    "schema": CHECKPOINT_SELECTION_SCHEMA,
+                    "candidateSetHash": inventory["candidateSetHash"],
+                    "checkpointHash": constrained["checkpointHash"],
+                },
+            )
+
+            execution = execute_checkpoint_resume(constrained_engine, store, plan)
+
+            self.assertEqual(execution["result"]["status"], "failed")
+            self.assertEqual(
+                execution["result"]["failureReason"], "event_budget_exhausted"
+            )
+            self.assertEqual(
+                execution["receipt"]["status"], "RESUME_EXECUTED_UNCOMMITTED"
+            )
+            self.assertEqual(execution["receipt"]["resultStatus"], "failed")
+            self.assertFalse(execution["receipt"]["resultCommitted"])
+            self.assertFalse(execution["receipt"]["historyCommitted"])
 
     def test_stale_or_tampered_plan_is_rejected_before_engine_execution(self):
         with tempfile.TemporaryDirectory() as directory:
