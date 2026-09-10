@@ -15,6 +15,7 @@ Current capabilities:
 - deterministic hashes and exact replay
 - cycle, contradiction, event-budget, dependency, convergence-evidence, and explicit convergence failures
 - deterministic pause/checkpoint/resume with exact causal-prefix replay before admission
+- content-addressed checkpoint discovery, caller-pinned selection, and plan-bound uncommitted resume execution
 - commit-gated persistent history
 - a self-contained local receipt observer with no causal authority or network dependency
 - bounded Causal Atlas exploration across single, paired, reversed-same-wave, and repeated actions
@@ -127,6 +128,21 @@ start
 Checkpoint state, run identity, loop identity, engine signature, dependency policy, required convergence effects, and realized convergence evidence are validated before continuation. The declared start state, timed inputs, wave depth, and engine contract are also replayed to the checkpoint boundary. Resume accepts the checkpoint only when the complete derived prefix—including state, transitions, activations, applied inputs, convergence path, cycle keys, and execution metadata—matches exactly. Recomputing a checkpoint hash after changing that prefix is therefore insufficient for admission.
 
 Prefix admission is deterministic integrity verification, not producer authentication. Its cost is linear in completed checkpoint depth because the prefix is intentionally reconstructed before continuation.
+
+Persisted restart flow remains explicit and policy-neutral:
+
+```text
+content-addressed checkpoint store
+ -> derived candidate inventory (no latest)
+ -> caller-pinned selection
+ -> deterministic resume plan
+ -> verified uncommitted resume execution
+ -> separate history admission, if explicitly requested later
+```
+
+`execute_checkpoint_resume()` revalidates the exact plan against the store before it calls the engine. The engine then performs its existing causal-prefix replay and continues with `commit=False`. The returned execution receipt binds the plan hash, checkpoint hash, and resulting run-receipt hash while explicitly recording that persistent history was not committed. `verify_checkpoint_resume_execution()` can independently reconstruct the same boundary; that verification deliberately repeats prefix replay and continuation work.
+
+This adapter does not choose a candidate, infer freshness, invoke persistent-history admission, or grant merge/CANON authority. The checkpoint stays canonical content-addressed evidence; inventory, plan, and execution receipts remain derived evidence around the engine's canonical run result.
 
 ## Observer glass, not a second engine
 
