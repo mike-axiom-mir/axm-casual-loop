@@ -14,7 +14,9 @@ _FINAL_NAME = re.compile(r"^(?P<checkpoint>[0-9a-f]{64})\.json$")
 _TEMP_NAME = re.compile(r"^\.[0-9a-f]{64}\..+\.tmp$")
 
 
-def _candidate_projection(checkpoint: dict[str, Any]) -> dict[str, Any]:
+def checkpoint_candidate_projection(checkpoint: dict[str, Any]) -> dict[str, Any]:
+    """Project a verified checkpoint into bounded inventory metadata."""
+
     return {
         "checkpointHash": checkpoint["checkpointHash"],
         "checkpointSchema": checkpoint.get("schema"),
@@ -75,7 +77,7 @@ def inspect_checkpoint_store(store: LocalCheckpointStore) -> dict[str, Any]:
                     }
                 )
             else:
-                candidates.append(_candidate_projection(checkpoint))
+                candidates.append(checkpoint_candidate_projection(checkpoint))
             continue
 
         if _TEMP_NAME.fullmatch(entry.name):
