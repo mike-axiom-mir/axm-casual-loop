@@ -1,0 +1,54 @@
+name: checkpoint-recovery-experience
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Syntax
+        run: python -m py_compile tools/checkpoint_recovery_station.py tests/test_checkpoint_recovery_station.py
+      - name: Complete deterministic suite
+        run: python -m unittest discover -s tests -v
+
+  chromium-experience:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Browser harness syntax
+        run: node --check tests/checkpoint_recovery_experience.mjs
+      - name: Install CI-only browser harness
+        run: |
+          npm install --no-save --package-lock=false playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: Exercise exact local recovery surface
+        env:
+          AXM_EVIDENCE_DIR: /tmp/axm-causal-loop-recovery-evidence
+        run: node tests/checkpoint_recovery_experience.mjs
+      - name: Retain visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkpoint-recovery-experience
+          path: /tmp/axm-causal-loop-recovery-evidence
+          if-no-files-found: error
