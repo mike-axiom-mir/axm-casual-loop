@@ -117,12 +117,18 @@ LocalCheckpointStore(sys.argv[1]).save(engine.pause(initial_state(),timed_influe
 `;
   execFileSync('python', ['-c', addThird, store], { stdio: 'inherit' });
 
+  assert(consoleErrors.length === 0, `unexpected console errors before intentional HOLD: ${consoleErrors.join(' | ')}`);
   await page.locator('.candidate .btn.primary').nth(1).click();
   await page.waitForFunction(() => document.querySelector('#planBanner')?.textContent?.includes('Selection held'));
   const holdText = await page.locator('#planPanel').textContent();
   assert(holdText.includes('candidate set changed'), 'stale candidate set must fail closed visibly');
   assert(await page.locator('#candidateCount').textContent() === '3', 'held response should expose refreshed verified candidate count');
   await page.screenshot({ path: path.join(evidenceDir, 'checkpoint-recovery-stale-hold-mobile.png'), fullPage: true });
+  const expectedHoldConsoleErrors = consoleErrors.splice(0);
+  assert(
+    expectedHoldConsoleErrors.every(message => /409|Conflict/i.test(message)),
+    `unexpected console output during intentional 409 HOLD: ${expectedHoldConsoleErrors.join(' | ')}`
+  );
 
   await page.locator('#refresh').click();
   await page.waitForFunction(() => document.querySelector('#candidateCount')?.textContent === '3');
@@ -159,7 +165,8 @@ LocalCheckpointStore(sys.argv[1]).save(engine.pause(initial_state(),timed_influe
     copiedPlanAuthority: copiedPlan.receipt.authority,
     staleCandidateSetHeld: true,
     pageErrors,
-    consoleErrors,
+    expectedHoldConsoleErrors,
+    unexpectedConsoleErrors: consoleErrors,
     foreignRequests,
     resumeExecutedByStation: false,
   };
