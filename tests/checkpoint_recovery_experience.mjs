@@ -53,7 +53,7 @@ function assert(condition, message) {
 
 const port = await freePort();
 const origin = `http://127.0.0.1:${port}`;
-const server = spawn('python', ['tools/checkpoint_recovery_station.py', '--store', store, '--port', String(port)], {
+const server = spawn('python', ['-m', 'tools.checkpoint_recovery_station', '--store', store, '--port', String(port)], {
   stdio: ['ignore', 'pipe', 'pipe']
 });
 let serverErr = '';
