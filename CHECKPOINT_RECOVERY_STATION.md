@@ -19,7 +19,7 @@ It does **not** choose a latest/best checkpoint, execute `engine.resume()`, muta
 Requires Python 3.11+ and an existing `LocalCheckpointStore` directory.
 
 ```bash
-python tools/checkpoint_recovery_station.py --store /path/to/checkpoints
+python -m tools.checkpoint_recovery_station --store /path/to/checkpoints
 ```
 
 Then open the printed loopback URL. The station binds only to `127.0.0.1`.
