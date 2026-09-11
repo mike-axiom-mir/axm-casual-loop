@@ -33,6 +33,7 @@ SOURCE_PATHS = {
     "causal_loop/observer.py": ROOT / "causal_loop/observer.py",
     "causal_loop/process_adapter.py": ROOT / "causal_loop/process_adapter.py",
     "causal_loop/train_platform.py": ROOT / "causal_loop/train_platform.py",
+    "causal_loop/train_platform_legacy.py": ROOT / "causal_loop/train_platform_legacy.py",
 }
 AUTHORITY = {
     "automaticExecution": False,
@@ -66,7 +67,6 @@ import stat
 import sys
 import zipfile
 
-
 CAPABILITY_ID = "axm.causal-loop.train-platform.process/v1"
 PORTABLE_SCHEMA = "axm.causal-loop.portable-process/v1"
 VERIFY_SCHEMA = "axm.causal-loop.portable-process-verification/v1"
@@ -87,6 +87,7 @@ ALLOWED_NAMES = (
     "causal_loop/observer.py",
     "causal_loop/process_adapter.py",
     "causal_loop/train_platform.py",
+    "causal_loop/train_platform_legacy.py",
 )
 AUTHORITY = {
     "automaticExecution": False,
