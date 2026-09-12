@@ -1,0 +1,180 @@
+name: Verify full Causal Loop growth integration
+
+on:
+  push:
+    branches:
+      - integration/growth-days-20260912
+
+permissions:
+  contents: read
+
+jobs:
+  atlas-map:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - run: rm .github/workflows/verify-growth-integration.yml
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Verify Atlas and real Chromium surface
+        run: |
+          python -m unittest discover -s tests -v
+          python -m unittest discover -s tests -p 'test_atlas_map.py' -v
+          python scripts/generate_atlas.py --output /tmp/axm-causal-atlas.json
+          python scripts/verify_atlas.py /tmp/axm-causal-atlas.json
+          python scripts/build_atlas_map.py /tmp/axm-causal-atlas.json --output /tmp/axm-causal-atlas-map.html
+          test -s /tmp/axm-causal-atlas-map.html
+          node --check tests/test_atlas_map_browser.mjs
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          npm install --no-save --no-package-lock --ignore-scripts playwright-core@1.55.0
+          CHROME="$CHROME" node tests/test_atlas_map_browser.mjs
+
+  process-adapter:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - run: rm .github/workflows/verify-growth-integration.yml
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Verify process adapter from outside checkout
+        run: |
+          python -m unittest discover -s tests -v
+          cd "$RUNNER_TEMP"
+          python "$GITHUB_WORKSPACE/scripts/causal_loop_ndjson.py" < "$GITHUB_WORKSPACE/examples/process-requests.ndjson" > responses.ndjson
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          responses=[json.loads(line) for line in Path('responses.ndjson').read_text(encoding='utf-8').splitlines()]
+          assert len(responses)==2
+          assert all(item['status']=='PASS' for item in responses)
+          assert responses[1]['replayMatches'] is True
+          PY
+
+  portable-process:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - run: rm .github/workflows/verify-growth-integration.yml
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Verify deterministic copied portable provider
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/build_causal_loop_portable.py tests/test_portable_process.py
+          python tests/test_portable_process.py -v
+          python -m unittest discover -s tests -v
+          python scripts/build_causal_loop_portable.py build --output causal-loop-process.pyz > portable-build.json
+          python scripts/build_causal_loop_portable.py build --output causal-loop-process-rebuild.pyz > portable-rebuild.json
+          cmp causal-loop-process.pyz causal-loop-process-rebuild.pyz
+          python scripts/build_causal_loop_portable.py verify causal-loop-process.pyz > portable-provider-verify.json
+          consumer="$RUNNER_TEMP/causal-loop-portable-consumer"
+          mkdir -p "$consumer"
+          cp causal-loop-process.pyz "$consumer/causal-loop-process.pyz"
+          (
+            cd "$consumer"
+            env -u PYTHONPATH python ./causal-loop-process.pyz portable-verify > portable-self-verify.json
+            env -u PYTHONPATH python ./causal-loop-process.pyz portable-describe > portable-describe.json
+            env -u PYTHONPATH python ./causal-loop-process.pyz < "$GITHUB_WORKSPACE/examples/process-requests.ndjson" > portable-responses.ndjson
+          )
+          python "$GITHUB_WORKSPACE/scripts/causal_loop_ndjson.py" < "$GITHUB_WORKSPACE/examples/process-requests.ndjson" > source-responses.ndjson
+          cmp source-responses.ndjson "$consumer/portable-responses.ndjson"
+
+  public-discovery-provider:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - run: rm .github/workflows/verify-growth-integration.yml
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Verify source-backed public discovery
+        run: |
+          python -m py_compile tools/generate_public_capabilities.py tests/test_public_capability_discovery.py
+          python tools/generate_public_capabilities.py --check
+          python -m unittest discover -s tests -p 'test_public_capability_discovery.py' -v
+          printf '%s\n' '{"schema":"axm.causal-loop.process-request/v1","requestId":"ci-discovery","op":"describe"}' | python scripts/causal_loop_ndjson.py > /tmp/causal-loop-describe.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          response=json.loads(Path('/tmp/causal-loop-describe.json').read_text(encoding='utf-8'))
+          static=json.loads(Path('capabilities/causal-loop-process-v1.json').read_text(encoding='utf-8'))
+          assert response['status']=='PASS'
+          assert response['capability']==static
+          assert response['authority']==static['authority']
+          PY
+          python -m unittest discover -s tests -v
+
+  public-discovery-consumer:
+    needs: public-discovery-provider
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - run: rm .github/workflows/verify-growth-integration.yml
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+      - name: Checkout pinned Discovery Buddy source only to build portable artifact
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: mike-axiom-mir/axm-discovery-buddy
+          ref: 565c38ecf93a9d563b02211258d8d36fcb1162b5
+          path: .discovery-buddy-source
+      - name: Prove portable discovery consumer interoperability
+        run: |
+          python .discovery-buddy-source/tools/build_portable_discovery.py build --output /tmp/discovery-buddy.pyz --receipt /tmp/discovery-buddy.pyz.receipt.json
+          python .discovery-buddy-source/tools/build_portable_discovery.py verify --output /tmp/discovery-buddy.pyz --receipt /tmp/discovery-buddy.pyz.receipt.json
+          rm -rf .discovery-buddy-source
+          PYTHONPATH= PYTHONNOUSERSITE=1 python /tmp/discovery-buddy.pyz scan "$GITHUB_WORKSPACE" --public --output-dir /tmp/axm-discovery
+          PYTHONPATH= PYTHONNOUSERSITE=1 python /tmp/discovery-buddy.pyz verify "$GITHUB_WORKSPACE" --public --output-dir /tmp/axm-discovery
+          PYTHONPATH= PYTHONNOUSERSITE=1 python /tmp/discovery-buddy.pyz query /tmp/axm-discovery/public-discovery.json --capability-id axm.causal-loop.train-platform.process/v1 --provider mike-axiom-mir/axm-casual-loop > /tmp/causal-loop-query.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          query=json.loads(Path('/tmp/causal-loop-query.json').read_text(encoding='utf-8'))
+          assert query['summary']=={'matches':1}
+          assert query['authority']['classification']=='DISCOVERY_EVIDENCE_ONLY'
+          candidate=query['candidates'][0]
+          assert candidate['repository']=='mike-axiom-mir/axm-casual-loop'
+          assert candidate['capability']['id']=='axm.causal-loop.train-platform.process/v1'
+          assert candidate['capability']['status'] is None
+          PY
+
+  cleanup:
+    needs: [atlas-map, process-adapter, portable-process, public-discovery-provider, public-discovery-consumer]
+    if: ${{ success() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: integration/growth-days-20260912
+          fetch-depth: 0
+      - name: Remove temporary verifier and restore exact product tree
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/verify-growth-integration.yml
+          git add -A
+          git commit -m "Remove temporary Causal Loop integration verifier"
+          git push origin HEAD:integration/growth-days-20260912
