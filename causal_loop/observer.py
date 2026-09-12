@@ -5,7 +5,7 @@ from typing import Any, Mapping
 
 from .engine import deterministic_hash
 
-OBSERVER_SCHEMA = "axm.causal-loop.observer-projection/v0.04"
+OBSERVER_SCHEMA = "axm.causal-loop.observer-projection/v0.05"
 
 
 def _frame(
@@ -30,10 +30,12 @@ def _frame(
 def project_receipt(receipt: Mapping[str, Any]) -> dict[str, Any]:
     """Project an authoritative run receipt into read-only visual frames.
 
-    The observer never executes causal modules or intervention handlers. It only applies
-    writes that are already recorded in the receipt. Module writes from the same wave are
+    The observer never executes causal modules or intervention handlers. Before projecting,
+    it verifies the deterministic hash binding for the complete receipt. It then applies
+    only writes already recorded in that receipt. Module writes from the same wave are
     grouped and applied atomically so the observer cannot invent intermediate canonical
-    states that never existed in the engine.
+    states that never existed in the engine. The hash is an integrity check, not a signature
+    or an authorship claim.
     """
 
     source = deepcopy(dict(receipt))
@@ -50,6 +52,12 @@ def project_receipt(receipt: Mapping[str, Any]) -> dict[str, Any]:
     missing = [key for key in required if key not in source]
     if missing:
         raise ValueError("receipt missing observer fields: " + ",".join(sorted(missing)))
+
+    expected_receipt_hash = source["receiptHash"]
+    unsigned_receipt = deepcopy(source)
+    unsigned_receipt.pop("receiptHash")
+    if deterministic_hash(unsigned_receipt) != expected_receipt_hash:
+        raise ValueError("receipt hash mismatch")
 
     state = deepcopy(dict(source["startState"]))
     if deterministic_hash(state) != source["startStateHash"]:
