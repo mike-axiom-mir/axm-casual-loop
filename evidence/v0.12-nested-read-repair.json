@@ -1,0 +1,53 @@
+{
+  "schema": "axm.causal-loop.nested-read-repair/v0.12",
+  "status": "verified",
+  "baseHead": "71df68a6a506abffad92eacb01f8e3b62541c20b",
+  "workflowRunId": 34392579071,
+  "remotePython": "3.11",
+  "before": {
+    "detectionEvidence": "evidence/v0.12-nested-read-gap.json",
+    "focusedResult": "0/2 passed",
+    "covertPredicateInfluenceAccepted": true,
+    "covertTransitionInfluenceAccepted": true
+  },
+  "after": {
+    "moduleReadPolicy": "declared-transitively-detached/v0.01",
+    "policyBoundIntoEngineSignature": true,
+    "focusedResult": "2/2 passed",
+    "completeTestResult": "76/76 passed",
+    "atlasResult": {
+      "caseCount": 208,
+      "convergedCount": 208,
+      "failedCount": 0,
+      "deterministicMismatchCount": 0,
+      "hardInvariantFailureCaseCount": 0,
+      "contradictionCaseCount": 0,
+      "authorityViolationCaseCount": 0,
+      "readViolationCaseCount": 0,
+      "uniqueRealizedPathCount": 183,
+      "uniqueEndStateCount": 9,
+      "atlasHash": "98de52ab4b13614191a8af71a818f4c11f90f56deaccf012a0a7fdf8a58fd915"
+    }
+  },
+  "implementation": {
+    "currentExecutionBase": "causal_loop/engine_v06.py",
+    "preservedPreIsolationBaseline": "causal_loop/engine_legacy.py",
+    "returnedNestedValuesAreDetached": true,
+    "undeclaredTopLevelReadsStillFailClosed": true,
+    "moduleValueTypesRemainUnfrozenCopies": true
+  },
+  "localTimingObservation": {
+    "completeSuiteMedianSeconds": {
+      "base74Tests": 1.272423,
+      "repair76Tests": 1.263273,
+      "runsPerSide": 7
+    },
+    "atlasMedianSeconds": {
+      "base": 0.353467,
+      "repair": 0.334774,
+      "runsPerSide": 11
+    },
+    "interpretation": "No slowdown was observed in these short local samples; this is not a cross-machine performance claim."
+  },
+  "claimBoundary": "This prevents one in-process module from mutating another module's wave inputs through values returned by the declared-read view. It is not a hostile-code sandbox; module code can still perform unrelated process side effects."
+}

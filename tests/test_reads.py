@@ -98,6 +98,79 @@ class ReadScopeTests(unittest.TestCase):
         self.assertEqual(first["readViolations"], second["readViolations"])
         self.assertEqual(first["endStateHash"], second["endStateHash"])
 
+    def test_nested_predicate_mutation_cannot_activate_a_later_module(self):
+        def mutate_nested_read(state):
+            state["shared"]["flag"] = True
+            return False
+
+        mutator = Module(
+            "a-mutator",
+            "0.01",
+            ("shared",),
+            mutate_nested_read,
+            lambda _s: {},
+            authority_scope=(),
+        )
+        observer = Module(
+            "b-observer",
+            "0.01",
+            ("shared",),
+            lambda state: state["shared"]["flag"],
+            lambda _s: {"done": True},
+            authority_scope=("done",),
+        )
+        engine = CausalLoopEngine(self.build_spec(lambda state: state["done"]), [
+            observer,
+            mutator,
+        ])
+        start = {"shared": {"flag": False}, "done": False}
+
+        receipt = engine.run(start)
+
+        self.assertEqual(receipt["status"], "failed")
+        self.assertEqual(receipt["failureReason"], "no_relevant_module")
+        self.assertEqual(receipt["endState"], start)
+        self.assertEqual(receipt["modulesActivated"], [])
+        self.assertEqual(receipt["stateTransitions"], [])
+
+    def test_nested_transition_mutation_cannot_change_a_later_proposal(self):
+        def mutate_nested_read(state):
+            state["shared"]["flag"] = True
+            return {"armed": True}
+
+        mutator = Module(
+            "a-mutator",
+            "0.01",
+            ("shared", "armed"),
+            lambda state: not state["armed"],
+            mutate_nested_read,
+            authority_scope=("armed",),
+        )
+        observer = Module(
+            "b-observer",
+            "0.01",
+            ("shared", "done"),
+            lambda state: not state["done"],
+            lambda state: {"done": state["shared"]["flag"]},
+            authority_scope=("done",),
+        )
+        engine = CausalLoopEngine(self.build_spec(lambda state: state["done"]), [
+            observer,
+            mutator,
+        ])
+        start = {"shared": {"flag": False}, "armed": False, "done": False}
+
+        receipt = engine.run(start)
+
+        self.assertEqual(receipt["status"], "failed")
+        self.assertEqual(receipt["failureReason"], "no_state_change")
+        self.assertEqual(
+            receipt["endState"],
+            {"shared": {"flag": False}, "armed": True, "done": False},
+        )
+        self.assertEqual(receipt["modulesActivated"], ["a-mutator"])
+        self.assertEqual(len(receipt["stateTransitions"]), 1)
+
     def test_train_guard_declares_previously_hidden_request_reads(self):
         engine = build_engine()
         guard = next(module for module in engine.modules if module.module_id == "09-guard-investigate")
