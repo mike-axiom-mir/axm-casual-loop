@@ -1,0 +1,101 @@
+name: portable-process
+
+on:
+  push:
+    paths:
+      - "causal_loop/__init__.py"
+      - "causal_loop/engine.py"
+      - "causal_loop/observer.py"
+      - "causal_loop/process_adapter.py"
+      - "causal_loop/train_platform.py"
+      - "capabilities/causal-loop-process-v1.json"
+      - "examples/process-requests.ndjson"
+      - "scripts/build_causal_loop_portable.py"
+      - "tests/test_portable_process.py"
+      - "docs/PORTABLE_PROCESS.md"
+      - ".github/workflows/portable-process.yml"
+      - "LICENSE"
+  pull_request:
+    paths:
+      - "causal_loop/__init__.py"
+      - "causal_loop/engine.py"
+      - "causal_loop/observer.py"
+      - "causal_loop/process_adapter.py"
+      - "causal_loop/train_platform.py"
+      - "capabilities/causal-loop-process-v1.json"
+      - "examples/process-requests.ndjson"
+      - "scripts/build_causal_loop_portable.py"
+      - "tests/test_portable_process.py"
+      - "docs/PORTABLE_PROCESS.md"
+      - ".github/workflows/portable-process.yml"
+      - "LICENSE"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - name: Check out exact source head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Assert exact source identity
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Syntax check portable boundary
+        run: |
+          python -m py_compile scripts/build_causal_loop_portable.py
+          python -m py_compile tests/test_portable_process.py
+      - name: Run focused portable regressions
+        run: python tests/test_portable_process.py -v
+      - name: Run complete deterministic suite
+        run: python -m unittest discover -s tests -v
+      - name: Build and provider-verify deterministic artifact
+        run: |
+          python scripts/build_causal_loop_portable.py build --output causal-loop-process.pyz > portable-build.json
+          python scripts/build_causal_loop_portable.py build --output causal-loop-process-rebuild.pyz > portable-rebuild.json
+          cmp causal-loop-process.pyz causal-loop-process-rebuild.pyz
+          python scripts/build_causal_loop_portable.py verify causal-loop-process.pyz > portable-provider-verify.json
+      - name: Prove checkout-independent copied artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer="$RUNNER_TEMP/causal-loop-portable-consumer"
+          mkdir -p "$consumer"
+          cp causal-loop-process.pyz "$consumer/causal-loop-process.pyz"
+          (
+            cd "$consumer"
+            env -u PYTHONPATH python ./causal-loop-process.pyz portable-verify > portable-self-verify.json
+            env -u PYTHONPATH python ./causal-loop-process.pyz portable-describe > portable-describe.json
+            env -u PYTHONPATH python ./causal-loop-process.pyz \
+              < "$GITHUB_WORKSPACE/examples/process-requests.ndjson" \
+              > portable-responses.ndjson
+          )
+          python "$GITHUB_WORKSPACE/scripts/causal_loop_ndjson.py" \
+            < "$GITHUB_WORKSPACE/examples/process-requests.ndjson" \
+            > source-responses.ndjson
+          cmp source-responses.ndjson "$consumer/portable-responses.ndjson"
+      - name: Publish portable evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: causal-loop-portable-process-python-${{ matrix.python-version }}
+          path: |
+            causal-loop-process.pyz
+            portable-build.json
+            portable-rebuild.json
+            portable-provider-verify.json
+            source-responses.ndjson
+            ${{ runner.temp }}/causal-loop-portable-consumer/portable-self-verify.json
+            ${{ runner.temp }}/causal-loop-portable-consumer/portable-describe.json
+            ${{ runner.temp }}/causal-loop-portable-consumer/portable-responses.ndjson
+          if-no-files-found: error
