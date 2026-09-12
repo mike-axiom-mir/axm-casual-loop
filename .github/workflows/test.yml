@@ -19,6 +19,8 @@ jobs:
           python-version: "3.11"
       - name: Run deterministic proof tests
         run: python -m unittest discover -s tests -v
+      - name: Exercise observer causal model
+        run: node observer/model.test.js
       - name: Export observer demo receipt
         if: always()
         run: python scripts/export_demo_receipt.py --output /tmp/axm-causal-loop-demo-receipt.json

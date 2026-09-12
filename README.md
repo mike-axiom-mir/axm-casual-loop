@@ -128,7 +128,18 @@ Checkpoint state, run identity, loop identity, engine signature, dependency poli
 
 ## Observer glass, not a second engine
 
-`observer/index.html` is a self-contained local viewer for completed causal receipts. It can play, pause, step, and scrub the recorded scene, but it cannot execute modules, inject actions, resolve contradictions, write canonical state, or reach the internet.
+`observer/index.html` is a self-contained local viewer for completed causal
+receipts. Its bundled demo gives a first-time visitor a one-click route through
+the train loop, visually separates external direction from derived
+consequences, and explains the exact state values changed at each frame. The
+timeline supports playback, scrubbing, direct frame selection, arrow keys, and
+the space bar, with reduced-motion behavior inherited from the user's system
+preference.
+
+The observer cannot execute modules, inject actions, resolve contradictions,
+write canonical state, or reach the internet. `observer/demo-receipt.json` is a
+generated presentation fixture, and the test suite requires it to match the
+current deterministic engine output exactly.
 
 Rendering remains presentation. The receipt remains evidence.
 
