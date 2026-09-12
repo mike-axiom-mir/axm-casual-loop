@@ -1,0 +1,34 @@
+{
+  "schema": "axm.causal-loop.evidence/v0.01",
+  "subject": "checkpoint causal-prefix replay admission",
+  "baseCommit": "f5ba8b45a3cd04b3e76018fa34b91be2be1da458",
+  "contract": {
+    "canonicalInputs": [
+      "startState",
+      "timedExternalInfluences",
+      "wavesExecuted",
+      "maxWaves",
+      "current engine contract"
+    ],
+    "admission": "exact deterministic replay of the complete checkpoint prefix",
+    "onMismatch": "raise ValueError before resumed execution"
+  },
+  "verifiedMutations": [
+    "state with recomputed state and checkpoint hashes",
+    "transition source with recomputed checkpoint hash",
+    "module activation history with recomputed checkpoint hash",
+    "applied influence, convergence path, cycle keys, and active-workset metadata"
+  ],
+  "verification": {
+    "focusedTestsPassed": 5,
+    "fullTestsPassed": 86,
+    "atlasCasesConverged": 208,
+    "atlasDeterministicMismatches": 0,
+    "atlasHash": "22c3eb2e40d2d188824b48aaaa14be635dfc35bf569997d56c3540a8d1070ef7",
+    "verifiedResumeIterations": 1000,
+    "verifiedResumeElapsedSeconds": 0.996417,
+    "runtime": "CPython 3.12 local container",
+    "performanceClaim": "observation only; no cross-environment performance claim"
+  },
+  "claimBoundary": "Replay proves consistency with this exact deterministic engine and declared inputs. SHA-256 remains integrity identity, not author authentication. Verification cost is linear in the completed prefix."
+}

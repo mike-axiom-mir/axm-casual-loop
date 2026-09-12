@@ -198,7 +198,30 @@ class CausalLoopEngine(_v07.CausalLoopEngine):
         expected_realized = self._realized_effects(context)
         if checkpoint.get("realizedConvergenceEffects") != expected_realized:
             raise ValueError("checkpoint realized convergence effects mismatch")
+        self._verify_checkpoint_prefix(checkpoint)
         return context
+
+    def _verify_checkpoint_prefix(self, checkpoint: Mapping[str, Any]) -> None:
+        """Require the saved prefix to equal deterministic execution from its inputs.
+
+        A checkpoint hash protects bytes against accidental drift, but a caller can
+        recompute that hash after changing state or retained execution evidence. Replay
+        makes the checkpoint's declared start, schedule, and causal depth the authority
+        for reconstructing every derived prefix field before resume can continue it.
+        """
+
+        try:
+            replayed = self.pause(
+                checkpoint["startState"],
+                timed_influences=checkpoint["timedExternalInfluences"],
+                after_waves=checkpoint["wavesExecuted"],
+                max_waves=checkpoint["maxWaves"],
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError("checkpoint causal prefix cannot be replayed") from exc
+
+        if replayed != dict(checkpoint):
+            raise ValueError("checkpoint causal prefix mismatch")
 
     def _receipt(self, context: Mapping[str, Any], *, commit: bool) -> dict[str, Any]:
         receipt = super()._receipt(context, commit=commit)
@@ -245,4 +268,95 @@ class CausalLoopEngine(_v07.CausalLoopEngine):
         return replayed
 
 
-commit_receipt_to_history = _v07.commit_receipt_to_history
+def _is_sha256(value: Any) -> bool:
+    return bool(
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
+def commit_receipt_to_history(receipt: Mapping[str, Any], history: list[dict[str, Any]]) -> None:
+    """Admit one current causal receipt into persistent history exactly once.
+
+    Persistent history is downstream evidence, so it must not trust mutable receipt labels
+    independently. Admission verifies the complete receipt digest plus the state/run/history
+    bindings that can be reconstructed without executing the loop again. Retrying the same
+    already-admitted commit is idempotent; conflicting evidence for the same run fails closed.
+
+    This is an integrity/lineage gate, not an authorship signature or semantic replay proof.
+    """
+
+    data = deepcopy(dict(receipt))
+    receipt_hash = data.pop("receiptHash", None)
+    if not _is_sha256(receipt_hash) or deterministic_hash(data) != receipt_hash:
+        raise ValueError("receipt hash mismatch")
+
+    if data.get("status") != "converged" or data.get("committed") is not True:
+        raise ValueError("only committed, converged runs may enter persistent history")
+    if data.get("rawEndInvariantPassed") is not True:
+        raise ValueError("committed receipt raw end invariant is not satisfied")
+    if data.get("convergenceRequirementsPassed") is not True:
+        raise ValueError("committed receipt convergence requirements are not satisfied")
+
+    start_state_hash = data.get("startStateHash")
+    end_state_hash = data.get("endStateHash")
+    if not _is_sha256(start_state_hash) or deterministic_hash(data.get("startState")) != start_state_hash:
+        raise ValueError("receipt start state hash mismatch")
+    if not _is_sha256(end_state_hash) or deterministic_hash(data.get("endState")) != end_state_hash:
+        raise ValueError("receipt end state hash mismatch")
+
+    loop_id = data.get("loopId")
+    loop_version = data.get("loopVersion")
+    run_id = data.get("runId")
+    schedule = data.get("timedExternalInfluences")
+    if not isinstance(loop_id, str) or not loop_id:
+        raise ValueError("receipt loop identity is invalid")
+    if not isinstance(loop_version, str) or not loop_version:
+        raise ValueError("receipt loop version is invalid")
+    if not isinstance(run_id, str) or not run_id:
+        raise ValueError("receipt run identity is invalid")
+    if not isinstance(schedule, list):
+        raise ValueError("receipt timed influence schedule is invalid")
+
+    expected_run_id = deterministic_hash(
+        {
+            "loopId": loop_id,
+            "version": loop_version,
+            "startStateHash": start_state_hash,
+            "timedExternalInfluences": schedule,
+        }
+    )[:24]
+    if run_id != expected_run_id:
+        raise ValueError("receipt run identity mismatch")
+
+    hard_results = [
+        result
+        for result in data.get("invariantResults", [])
+        if isinstance(result, Mapping) and result.get("kind") in {"hard", "hard_end"}
+    ]
+    if not hard_results or any(result.get("passed") is not True for result in hard_results):
+        raise ValueError("committed receipt contains a failed hard invariant")
+
+    expected_effect = {
+        "type": "causal_loop_committed",
+        "loopId": loop_id,
+        "runId": run_id,
+        "endStateHash": end_state_hash,
+    }
+    if data.get("historyEffects") != [expected_effect]:
+        raise ValueError("receipt history effect lineage mismatch")
+
+    for existing in history:
+        if not isinstance(existing, Mapping):
+            continue
+        if (
+            existing.get("type") == "causal_loop_committed"
+            and existing.get("loopId") == loop_id
+            and existing.get("runId") == run_id
+        ):
+            if dict(existing) == expected_effect:
+                return
+            raise ValueError("conflicting persistent history already exists for run")
+
+    history.append(deepcopy(expected_effect))
