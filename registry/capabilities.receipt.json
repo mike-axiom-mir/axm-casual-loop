@@ -3,7 +3,7 @@
   "repository": "mike-axiom-mir/axm-casual-loop",
   "registry": {
     "path": "registry/capabilities.jsonl",
-    "sha256": "2cb1c9ed350bb61304bf0dbe8d0591f6e31045e2a2bdfa32fff7ef4fbc18788b",
+    "sha256": "62dd736342b21b3a213e277d7ee0f2efa0298095db3c56b54f0ec9c7fd516b1b",
     "capability_count": 1,
     "capability_ids": [
       "axm.causal-loop.train-platform.process/v1"
@@ -12,7 +12,7 @@
   "sources": [
     {
       "path": "capabilities/causal-loop-process-v1.json",
-      "git_blob_sha1": "9785693985153e7e5a8193e5c7eae33ad6cc9fee"
+      "git_blob_sha1": "9f4dd1331c5ef67fcafb6d4ab1c86a907f76d069"
     },
     {
       "path": "causal_loop/process_adapter.py",
@@ -56,5 +56,5 @@
     "merge_authority": false,
     "canon_authority": false
   },
-  "receipt_sha256": "2259e56c94ca5fc93533d03551a1e36a0e0a2714ac3ee1d40ddb3d349d65e680"
+  "receipt_sha256": "c4650c714dfdd91418ebe3bc3ec05ba802308fb8fc3dec5edc41a28e745fa70f"
 }

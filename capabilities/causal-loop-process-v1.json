@@ -21,7 +21,7 @@
     "loopId": "axm.train-platform-loop/v0.01",
     "loopVersion": "0.08",
     "receiptSchema": "axm.causal-loop.run-receipt/v0.08",
-    "engineSignature": "6cefb89e614353a1289f1661dc08d950f8c9b89dea218d5670fa5ae056c334b9",
+    "engineSignature": "678c84d030c3868b352a32d4c8a1ce3635ac4d679152de02d2a52a3c25feb64f",
     "allowedActions": [
       "WAIT",
       "BLOCK_DOOR",
