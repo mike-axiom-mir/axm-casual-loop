@@ -1,0 +1,124 @@
+name: Reconcile Causal Loop growth lanes
+
+on:
+  push:
+    branches:
+      - integration/growth-days-20260912
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: integration/growth-days-20260912
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Merge proven frontier and repair only shared seams
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin '+refs/heads/*:refs/remotes/origin/*'
+
+          union_readme() {
+            git show :1:README.md > /tmp/readme-base.md
+            git show :2:README.md > /tmp/readme-ours.md
+            git show :3:README.md > /tmp/readme-theirs.md
+            git merge-file --union -p /tmp/readme-ours.md /tmp/readme-base.md /tmp/readme-theirs.md > README.md
+            git add README.md
+          }
+
+          merge_frontier() {
+            local sha="$1"
+            local label="$2"
+            local mode="${3:-normal}"
+            set +e
+            git merge --no-ff --no-commit "$sha"
+            local rc=$?
+            set -e
+            if [ "$rc" -ne 0 ]; then
+              mapfile -t conflicts < <(git diff --name-only --diff-filter=U)
+              printf 'conflicts for %s: %s\n' "$label" "${conflicts[*]}"
+              if printf '%s\n' "${conflicts[@]}" | grep -qx 'README.md'; then
+                union_readme
+              fi
+              if [ "$mode" = "nested-read" ] && printf '%s\n' "${conflicts[@]}" | grep -qx 'causal_loop/engine.py'; then
+                git checkout --ours causal_loop/engine.py
+                python - <<'PY'
+          from pathlib import Path
+          p = Path('causal_loop/engine.py')
+          text = p.read_text(encoding='utf-8')
+          anchor = 'DEPENDENCY_POLICY = _v07.DEPENDENCY_POLICY\n'
+          binding = 'MODULE_READ_POLICY = _v07.MODULE_READ_POLICY\n'
+          if binding not in text:
+              if anchor not in text:
+                  raise SystemExit('current engine dependency-policy anchor missing')
+              text = text.replace(anchor, anchor + binding, 1)
+          signature_anchor = '                "dependencyPolicy": DEPENDENCY_POLICY,\n'
+          signature_binding = '                "moduleReadPolicy": MODULE_READ_POLICY,\n'
+          if signature_binding not in text:
+              if signature_anchor not in text:
+                  raise SystemExit('current engine signature anchor missing')
+              text = text.replace(signature_anchor, signature_binding + signature_anchor, 1)
+          p.write_text(text, encoding='utf-8')
+          PY
+                git add causal_loop/engine.py
+              fi
+              remaining="$(git diff --name-only --diff-filter=U)"
+              if [ -n "$remaining" ]; then
+                echo "unexpected unresolved conflicts for $label:"
+                echo "$remaining"
+                exit 1
+              fi
+            fi
+            git commit -m "Integrate $label"
+          }
+
+          merge_frontier 195a9aa39366b0df8a6e99cb6b7cd5475b402998 "observer receipt integrity"
+          merge_frontier 696adf6f5d1c0777ee34b0ebe7fe54c3a25db9be "guided causal observer"
+          merge_frontier 6b1920bc1d203da3d360bae407ee3f94b1e0277e "Causal Atlas input contracts"
+          merge_frontier fd4af30610a1bbb5714c2dadbf274f80ca8f6b97 "Causal Atlas admission and map"
+          merge_frontier f561a8a325444be30ad0b4fee412b3958aa1f1ee "causal process discovery"
+          merge_frontier b14c4fad2af9f1843394c05d21a78df791c757ef "portable causal process"
+          merge_frontier b0741266fc19d17f56e8f43c12989dd547f026aa "checkpoint and history frontier"
+          merge_frontier bd9162eebd3fe10f2a61b8f66d4fc7ba0b1d5472 "checkpoint recovery station"
+          merge_frontier 37d9aef5a9bd54db743fecff4f0e16d101e84262 "nested read isolation" nested-read
+
+          # Engine identity changed when the nested-read policy joined the checkpoint stack.
+          # Refresh only derived/bundled evidence that explicitly binds to current engine bytes.
+          python scripts/export_demo_receipt.py --output observer/demo-receipt.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from causal_loop.process_adapter import capability_descriptor
+          Path('capabilities/causal-loop-process-v1.json').write_text(
+              json.dumps(capability_descriptor(), indent=2) + '\n',
+              encoding='utf-8',
+          )
+          PY
+          python tools/generate_public_capabilities.py --write
+
+          python -m compileall -q causal_loop scripts tools tests
+          python -m unittest discover -s tests -v
+          node observer/model.test.js
+          node --check tests/checkpoint_recovery_experience.mjs
+          python scripts/export_demo_receipt.py --output /tmp/axm-causal-loop-demo-receipt.json
+          python scripts/generate_atlas.py --output /tmp/axm-causal-atlas.json
+          python tools/generate_public_capabilities.py --check
+          git diff --check
+
+          rm .github/workflows/reconcile-growth-days.yml
+          git add -A
+          git commit -m "Finalize Causal Loop growth-day integration evidence"
+          git push origin HEAD:integration/growth-days-20260912
