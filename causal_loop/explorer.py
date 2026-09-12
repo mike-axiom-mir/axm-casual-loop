@@ -23,6 +23,42 @@ class ExplorationCase:
         }
 
 
+def _validated_actions(actions: Sequence[str]) -> tuple[str, ...]:
+    if isinstance(actions, (str, bytes)):
+        raise ValueError("actions must be a sequence of non-empty strings, not one string")
+    raw_actions = tuple(actions)
+    if not raw_actions or any(
+        not isinstance(action, str) or not action for action in raw_actions
+    ):
+        raise ValueError("actions must contain non-empty strings")
+    return tuple(dict.fromkeys(raw_actions))
+
+
+def _validated_waves(waves: Iterable[int]) -> tuple[int, ...]:
+    # Validate before deduplication. Python considers bool equal to 0/1 and integral
+    # floats equal to ints, so set() first could silently hide malformed values in an
+    # order-dependent way (for example [1, True] or [1, 1.0]).
+    raw_waves = tuple(waves)
+    if not raw_waves or any(
+        not isinstance(wave, int) or isinstance(wave, bool) or wave < 0
+        for wave in raw_waves
+    ):
+        raise ValueError("waves must contain non-negative integers")
+    return tuple(sorted(set(raw_waves)))
+
+
+def _validate_exploration_cases(cases: Sequence[ExplorationCase]) -> None:
+    case_ids: list[str] = []
+    for case in cases:
+        if not isinstance(case, ExplorationCase):
+            raise ValueError("cases must contain ExplorationCase values")
+        if not isinstance(case.case_id, str) or not case.case_id:
+            raise ValueError("case_id values must be non-empty strings")
+        case_ids.append(case.case_id)
+    if len(case_ids) != len(set(case_ids)):
+        raise ValueError("case_id values must be unique")
+
+
 def bounded_schedule_cases(
     actions: Sequence[str],
     waves: Iterable[int],
@@ -34,15 +70,10 @@ def bounded_schedule_cases(
 ) -> list[ExplorationCase]:
     """Generate a small deterministic schedule space for architecture probing."""
 
-    ordered_actions = tuple(dict.fromkeys(actions))
-    ordered_waves = tuple(sorted(set(waves)))
-    if not ordered_actions:
-        raise ValueError("actions must not be empty")
-    if not ordered_waves or any(
-        not isinstance(wave, int) or isinstance(wave, bool) or wave < 0
-        for wave in ordered_waves
-    ):
-        raise ValueError("waves must contain non-negative integers")
+    ordered_actions = _validated_actions(actions)
+    ordered_waves = _validated_waves(waves)
+    if not isinstance(max_actions_per_case, int) or isinstance(max_actions_per_case, bool):
+        raise ValueError("max_actions_per_case must be integer 1 or 2")
     if max_actions_per_case not in {1, 2}:
         raise ValueError("bounded explorer currently supports max_actions_per_case 1 or 2")
 
@@ -143,8 +174,9 @@ def explore_schedule_space(
     *,
     repeats: int = 2,
 ) -> dict[str, Any]:
-    if repeats < 2:
-        raise ValueError("repeats must be >= 2 so determinism is actually checked")
+    if not isinstance(repeats, int) or isinstance(repeats, bool) or repeats < 2:
+        raise ValueError("repeats must be an integer >= 2 so determinism is actually checked")
+    _validate_exploration_cases(cases)
 
     module_read_keys = sorted({key for module in engine.modules for key in module.reads})
     module_read_key_set = set(module_read_keys)

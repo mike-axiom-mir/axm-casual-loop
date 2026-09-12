@@ -1,0 +1,144 @@
+name: Causal Loop public capability discovery
+
+on:
+  pull_request:
+    paths:
+      - '.axm/discovery-public.json'
+      - 'capabilities/causal-loop-process-v1.json'
+      - 'causal_loop/process_adapter.py'
+      - 'causal_loop/engine.py'
+      - 'causal_loop/train_platform.py'
+      - 'scripts/causal_loop_ndjson.py'
+      - 'LICENSE'
+      - 'registry/**'
+      - 'tools/generate_public_capabilities.py'
+      - 'tests/test_public_capability_discovery.py'
+      - 'DISCOVERY.md'
+      - '.github/workflows/public-capability-discovery.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.axm/discovery-public.json'
+      - 'capabilities/causal-loop-process-v1.json'
+      - 'causal_loop/process_adapter.py'
+      - 'causal_loop/engine.py'
+      - 'causal_loop/train_platform.py'
+      - 'scripts/causal_loop_ndjson.py'
+      - 'LICENSE'
+      - 'registry/**'
+      - 'tools/generate_public_capabilities.py'
+      - 'tests/test_public_capability_discovery.py'
+      - 'DISCOVERY.md'
+      - '.github/workflows/public-capability-discovery.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  provider:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Compile discovery boundary
+        run: |
+          python -m py_compile tools/generate_public_capabilities.py tests/test_public_capability_discovery.py
+      - name: Verify generated capability evidence
+        run: python tools/generate_public_capabilities.py --check
+      - name: Run focused fail-closed discovery regressions
+        run: python -m unittest discover -s tests -p 'test_public_capability_discovery.py' -v
+      - name: Verify real process descriptor
+        run: |
+          printf '%s\n' '{"schema":"axm.causal-loop.process-request/v1","requestId":"ci-discovery","op":"describe"}' |
+            python scripts/causal_loop_ndjson.py > /tmp/causal-loop-describe.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          response = json.loads(Path('/tmp/causal-loop-describe.json').read_text(encoding='utf-8'))
+          static = json.loads(Path('capabilities/causal-loop-process-v1.json').read_text(encoding='utf-8'))
+          assert response['status'] == 'PASS'
+          assert response['capability'] == static
+          assert response['authority'] == static['authority']
+          print(json.dumps({
+              'capability': static['capabilityId'],
+              'status': None,
+              'transport': static['protocol']['transport'],
+              'authority': static['authority'],
+          }, sort_keys=True))
+          PY
+      - name: Preserve complete repository suite
+        run: python -m unittest discover -s tests -v
+
+  portable-discovery-consumer:
+    needs: provider
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Causal Loop lane
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Checkout pinned Discovery Buddy source only to build portable artifact
+        uses: actions/checkout@v4
+        with:
+          repository: mike-axiom-mir/axm-discovery-buddy
+          ref: 565c38ecf93a9d563b02211258d8d36fcb1162b5
+          path: .discovery-buddy-source
+      - name: Build and independently verify deterministic Discovery Buddy zipapp
+        run: |
+          python .discovery-buddy-source/tools/build_portable_discovery.py build \
+            --output /tmp/discovery-buddy.pyz \
+            --receipt /tmp/discovery-buddy.pyz.receipt.json
+          python .discovery-buddy-source/tools/build_portable_discovery.py verify \
+            --output /tmp/discovery-buddy.pyz \
+            --receipt /tmp/discovery-buddy.pyz.receipt.json
+          rm -rf .discovery-buddy-source
+          test ! -e .discovery-buddy-source
+          PYTHONPATH= PYTHONNOUSERSITE=1 python /tmp/discovery-buddy.pyz --help
+      - name: Scan, verify, and query Causal Loop using only the portable zipapp
+        run: |
+          PYTHONPATH= PYTHONNOUSERSITE=1 python /tmp/discovery-buddy.pyz scan "$GITHUB_WORKSPACE" \
+            --public --output-dir /tmp/axm-discovery
+          PYTHONPATH= PYTHONNOUSERSITE=1 python /tmp/discovery-buddy.pyz verify "$GITHUB_WORKSPACE" \
+            --public --output-dir /tmp/axm-discovery
+          PYTHONPATH= PYTHONNOUSERSITE=1 python /tmp/discovery-buddy.pyz query \
+            /tmp/axm-discovery/public-discovery.json \
+            --capability-id axm.causal-loop.train-platform.process/v1 \
+            --provider mike-axiom-mir/axm-casual-loop > /tmp/causal-loop-query.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          query = json.loads(Path('/tmp/causal-loop-query.json').read_text(encoding='utf-8'))
+          assert query['schema'] == 'axm.discovery-query/v0.1'
+          assert query['summary'] == {'matches': 1}
+          assert query['authority'] == {
+              'classification': 'DISCOVERY_EVIDENCE_ONLY',
+              'execute': False,
+              'install': False,
+              'select': False,
+              'merge': False,
+              'canon': False,
+          }
+          candidate = query['candidates'][0]
+          assert candidate['repository'] == 'mike-axiom-mir/axm-casual-loop'
+          capability = candidate['capability']
+          assert capability['id'] == 'axm.causal-loop.train-platform.process/v1'
+          assert capability['status'] is None
+          assert capability['providers'] == ['mike-axiom-mir/axm-casual-loop']
+          print(json.dumps({
+              'matches': 1,
+              'provider': candidate['repository'],
+              'capability': capability['id'],
+              'status': capability['status'],
+              'authority': query['authority']['classification'],
+              'discovery_source_checkout_present': False,
+          }, sort_keys=True))
+          PY

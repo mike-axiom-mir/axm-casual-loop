@@ -1,0 +1,52 @@
+name: Causal Atlas map experience
+
+on:
+  push:
+    branches:
+      - automation/experience-causal-atlas-map-20260910
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  atlas-map:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out exact source head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Assert exact source identity
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run complete deterministic proof suite
+        run: python -m unittest discover -s tests -v
+      - name: Exercise focused Atlas Map contracts
+        run: python -m unittest discover -s tests -p 'test_atlas_map.py' -v
+      - name: Generate and verify real bounded Atlas
+        run: |
+          python scripts/generate_atlas.py --output /tmp/axm-causal-atlas.json
+          python scripts/verify_atlas.py /tmp/axm-causal-atlas.json
+          python scripts/build_atlas_map.py /tmp/axm-causal-atlas.json --output /tmp/axm-causal-atlas-map.html
+          test -s /tmp/axm-causal-atlas-map.html
+      - name: Check browser witness syntax
+        run: node --check tests/test_atlas_map_browser.mjs
+      - name: Exercise the generated Atlas Map in Chromium
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          npm install --no-save --no-package-lock --ignore-scripts playwright-core@1.55.0
+          CHROME="$CHROME" node tests/test_atlas_map_browser.mjs
+      - name: Preserve Atlas Map render evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: causal-atlas-map-evidence
+          path: artifacts/causal-atlas-map
+          if-no-files-found: error

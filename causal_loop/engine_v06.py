@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Iterable, Iterator, Mapping, Sequence
 
 from . import engine_legacy as _legacy
 
@@ -15,6 +15,26 @@ deterministic_hash = _legacy.deterministic_hash
 TimedInfluence = _legacy.TimedInfluence
 Module = _legacy.Module
 Invariant = _legacy.Invariant
+MODULE_READ_POLICY = "declared-transitively-detached/v0.01"
+
+
+class _ModuleStateView(Mapping[str, Any]):
+    """Declared reads detached transitively from the shared wave snapshot."""
+
+    def __init__(self, state: Mapping[str, Any], allowed_keys: Sequence[str]):
+        self._state = state
+        self._allowed = frozenset(allowed_keys)
+
+    def __getitem__(self, key: str) -> Any:
+        if key not in self._allowed:
+            raise _legacy._UndeclaredModuleRead(key)
+        return deepcopy(self._state[key])
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(sorted(key for key in self._allowed if key in self._state))
+
+    def __len__(self) -> int:
+        return sum(key in self._state for key in self._allowed)
 
 
 @dataclass(frozen=True)
@@ -30,6 +50,8 @@ class CausalLoopEngine(_legacy.CausalLoopEngine):
     v0.06 keeps the proven v0.05 module/read/checkpoint machinery while making the
     intervention boundary executable: external actors may only write declared direction
     keys. Out-of-scope handler writes fail deterministically before canonical state changes.
+    Declared module reads are transitively detached so nested values cannot mutate the
+    shared wave snapshot; that policy is bound into the engine signature.
     """
 
     CHECKPOINT_SCHEMA = "axm.causal-loop.checkpoint/v0.06"
@@ -42,6 +64,7 @@ class CausalLoopEngine(_legacy.CausalLoopEngine):
                 "loopVersion": self.spec.version,
                 "receiptSchema": self.spec.receipt_schema,
                 "interventionWriteScope": list(self.spec.intervention_write_scope),
+                "moduleReadPolicy": MODULE_READ_POLICY,
                 "moduleContracts": [
                     module.contract()
                     for module in sorted(self.modules, key=lambda item: item.module_id)
@@ -172,7 +195,7 @@ class CausalLoopEngine(_legacy.CausalLoopEngine):
             for module in sorted(self.modules, key=lambda item: item.module_id):
                 try:
                     relevant = module.predicate(
-                        _legacy._ModuleStateView(snapshot, module.reads)
+                        _ModuleStateView(snapshot, module.reads)
                     )
                 except _legacy._UndeclaredModuleRead as exc:
                     predicate_read_violations.append(
@@ -202,7 +225,7 @@ class CausalLoopEngine(_legacy.CausalLoopEngine):
             for module in applicable:
                 try:
                     raw_writes = dict(
-                        module.transition(_legacy._ModuleStateView(snapshot, module.reads))
+                        module.transition(_ModuleStateView(snapshot, module.reads))
                     )
                 except _legacy._UndeclaredModuleRead as exc:
                     transition_read_violations.append(

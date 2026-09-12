@@ -17,6 +17,7 @@ TimedInfluence = _v06.TimedInfluence
 Module = _v06.Module
 Invariant = _v06.Invariant
 LoopSpec = _v06.LoopSpec
+MODULE_READ_POLICY = _v06.MODULE_READ_POLICY
 
 DEPENDENCY_POLICY = "all-prior-activation/v0.01"
 
@@ -48,6 +49,7 @@ class CausalLoopEngine(_v06.CausalLoopEngine):
                 "loopVersion": self.spec.version,
                 "receiptSchema": self.spec.receipt_schema,
                 "interventionWriteScope": list(self.spec.intervention_write_scope),
+                "moduleReadPolicy": MODULE_READ_POLICY,
                 "dependencyPolicy": DEPENDENCY_POLICY,
                 "moduleContracts": [
                     module.contract()

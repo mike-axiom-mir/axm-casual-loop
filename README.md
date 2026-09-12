@@ -4,17 +4,18 @@ A source-honest prototype for testing whether a bounded deterministic loop can k
 
 ## Status
 
-**v0.11 deterministic-contract proof harness. Not a game engine, movie engine, VR engine, or general simulation claim.**
+**v0.12 deterministic-contract proof harness. Not a game engine, movie engine, VR engine, or general simulation claim.**
 
 The current prototype is one deterministic `TRAIN PLATFORM LOOP`. Its hard boundary is simple: the train approaches, causal events unfold, and the train eventually leaves. The interior can change through timed external direction while canonical consequences remain derived by deterministic modules.
 
 Current capabilities:
 
-- atomic module waves from one frozen state snapshot
+- atomic module waves from one frozen state snapshot, with transitively detached module reads
 - timed external interventions with scheduled/applied/unapplied receipt separation
 - deterministic hashes and exact replay
 - cycle, contradiction, event-budget, dependency, convergence-evidence, and explicit convergence failures
-- deterministic pause/checkpoint/resume without replaying the completed prefix
+- deterministic pause/checkpoint/resume with exact causal-prefix replay before admission
+- content-addressed checkpoint discovery, caller-pinned selection, and plan-bound uncommitted resume execution
 - commit-gated persistent history
 - a self-contained local receipt observer with no causal authority or network dependency
 - bounded Causal Atlas exploration across single, paired, reversed-same-wave, and repeated actions
@@ -28,7 +29,7 @@ Current capabilities:
 
 GitHub Actions currently verifies:
 
-- **74/74 tests passing**
+- **76/76 tests passing**
 - **208/208 bounded Atlas schedules converging**
 - **183 unique realized causal paths**
 - **9 unique endpoint states**
@@ -43,7 +44,7 @@ GitHub Actions currently verifies:
 Current Atlas hash:
 
 ```text
-22c3eb2e40d2d188824b48aaaa14be635dfc35bf569997d56c3540a8d1070ef7
+98de52ab4b13614191a8af71a818f4c11f90f56deaccf012a0a7fdf8a58fd915
 ```
 
 ## Direction is not consequence authority
@@ -59,6 +60,17 @@ TALK_TO_PASSENGER
 The intervention boundary only permits the corresponding direction-state keys. It cannot directly write consequences such as train delay or departure state. Causal modules must derive those consequences from canonical state.
 
 A rejected external consequence write fails explicitly with `intervention_scope_violation` before canonical state changes.
+
+## Frozen reads are transitively isolated
+
+Declared reads are not merely protected at the top-level mapping. Every value returned to a
+module predicate or transition is a detached copy, including nested mappings and sequences.
+A module therefore cannot mutate the shared wave snapshot through a nested reference and
+covertly influence another module outside its declared write authority.
+
+The red behavior is preserved in `evidence/v0.12-nested-read-gap.json`. The pre-isolation
+v0.05 executor remains in `causal_loop/engine_legacy.py`; current v0.06-and-later execution
+binds the `declared-transitively-detached/v0.01` policy into the engine signature.
 
 ## Dependencies are causal
 
@@ -124,11 +136,39 @@ start
  -> convergence
 ```
 
-Checkpoint state, run identity, loop identity, engine signature, dependency policy, required convergence effects, and realized convergence evidence are validated before continuation.
+Checkpoint state, run identity, loop identity, engine signature, dependency policy, required convergence effects, and realized convergence evidence are validated before continuation. The declared start state, timed inputs, wave depth, and engine contract are also replayed to the checkpoint boundary. Resume accepts the checkpoint only when the complete derived prefix—including state, transitions, activations, applied inputs, convergence path, cycle keys, and execution metadata—matches exactly. Recomputing a checkpoint hash after changing that prefix is therefore insufficient for admission.
+
+Prefix admission is deterministic integrity verification, not producer authentication. Its cost is linear in completed checkpoint depth because the prefix is intentionally reconstructed before continuation.
+
+Persisted restart flow remains explicit and policy-neutral:
+
+```text
+content-addressed checkpoint store
+ -> derived candidate inventory (no latest)
+ -> caller-pinned selection
+ -> deterministic resume plan
+ -> verified uncommitted resume execution
+ -> separate history admission, if explicitly requested later
+```
+
+`execute_checkpoint_resume()` revalidates the exact plan against the store before it calls the engine. The engine then performs its existing causal-prefix replay and continues with `commit=False`. The returned execution receipt binds the plan hash, checkpoint hash, resulting run-receipt hash, and resulting convergence/failure status while explicitly recording that neither the result nor persistent history was committed. A failed continuation remains explicit execution evidence rather than being relabeled as a successful recovery. `verify_checkpoint_resume_execution()` can independently reconstruct the same boundary; that verification deliberately repeats prefix replay and continuation work.
+
+This adapter does not choose a candidate, infer freshness, invoke persistent-history admission, or grant merge/CANON authority. The checkpoint stays canonical content-addressed evidence; inventory, plan, and execution receipts remain derived evidence around the engine's canonical run result.
 
 ## Observer glass, not a second engine
 
-`observer/index.html` is a self-contained local viewer for completed causal receipts. It can play, pause, step, and scrub the recorded scene, but it cannot execute modules, inject actions, resolve contradictions, write canonical state, or reach the internet.
+`observer/index.html` is a self-contained local viewer for completed causal
+receipts. Its bundled demo gives a first-time visitor a one-click route through
+the train loop, visually separates external direction from derived
+consequences, and explains the exact state values changed at each frame. The
+timeline supports playback, scrubbing, direct frame selection, arrow keys, and
+the space bar, with reduced-motion behavior inherited from the user's system
+preference.
+
+The observer cannot execute modules, inject actions, resolve contradictions,
+write canonical state, or reach the internet. `observer/demo-receipt.json` is a
+generated presentation fixture, and the test suite requires it to match the
+current deterministic engine output exactly.
 
 Rendering remains presentation. The receipt remains evidence.
 
@@ -146,16 +186,19 @@ Open `observer/index.html` locally and load the generated demo receipt to inspec
 
 ## Evidence trail
 
-The repo intentionally preserves useful red states instead of rewriting history. Detection and repair evidence includes timing, causal debt, repeated incidents, module write authority, module read contracts, external intervention authority, dependency enforcement, and convergence-effect enforcement.
+The repo intentionally preserves useful red states instead of rewriting history. Detection and repair evidence includes timing, causal debt, repeated incidents, module write authority, module read contracts, nested read isolation, external intervention authority, dependency enforcement, and convergence-effect enforcement.
 
 Latest summaries:
 
 - `evidence/v0.10-dependency-repair.json`
 - `evidence/v0.11-convergence-effect-repair.json`
+- `evidence/v0.12-checkpoint-prefix-gap.json`
+- `evidence/v0.12-checkpoint-prefix-repair.json`
+- `evidence/v0.12-nested-read-repair.json`
 
 ## Claim boundary
 
-The proof remains deliberately narrow. It supports the claim that this bounded deterministic scene can vary its causal interior under timed direction while replay, checkpoints, presentation boundaries, declared read/write authority, external direction scope, simple prior-activation dependencies, and required committed convergence evidence remain explicit and testable.
+The proof remains deliberately narrow. It supports the claim that this bounded deterministic scene can vary its causal interior under timed direction while replay, checkpoints, presentation boundaries, transitively isolated declared reads, write authority, external direction scope, simple prior-activation dependencies, and required committed convergence evidence remain explicit and testable.
 
 It does **not** prove that large loop spaces are cheap, that arbitrary wall-clock concurrency is deterministic, that arbitrary games/movies/VR can be compiled into this form, that automatic generation will be compelling, or that this architecture outperforms established engines.
 

@@ -1,0 +1,28 @@
+{
+  "schema": "axm.causal-loop.nested-read-gap/v0.12",
+  "status": "reproduced-gap",
+  "baseHead": "71df68a6a506abffad92eacb01f8e3b62541c20b",
+  "finding": {
+    "declaredRead": "shared",
+    "undeclaredNestedMutation": "shared.flag = true",
+    "mutatorAuthorityScope": [],
+    "laterModuleActivated": true,
+    "receiptStatus": "converged",
+    "canonicalSharedValue": false,
+    "committedDerivedValue": true,
+    "reportedReadViolationCount": 0,
+    "reportedAuthorityViolationCount": 0
+  },
+  "reproduction": {
+    "focusedTestsAdded": 2,
+    "preRepairResult": "2 failures",
+    "predicatePhaseLeakReproduced": true,
+    "transitionPhaseLeakReproduced": true
+  },
+  "interpretation": [
+    "The top-level Mapping prevented assignment through the view itself but returned nested objects by reference.",
+    "All modules in a wave received views backed by the same snapshot, so one module could change another module's inputs without proposing a write.",
+    "The canonical nested field stayed unchanged, making the covert causal influence invisible in the recorded state delta and violation counts."
+  ],
+  "claimBoundary": "This reproduces an in-process module contract escape. It is not evidence of operating-system process isolation failure or remote code execution."
+}

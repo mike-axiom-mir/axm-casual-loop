@@ -50,6 +50,20 @@ class ObserverProofTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             project_receipt(tampered)
 
+    def test_tampered_receipt_metadata_is_rejected(self):
+        receipt = self._receipt()
+        tampered = deepcopy(receipt)
+        tampered["loopId"] = "tampered-loop"
+        with self.assertRaisesRegex(ValueError, "receipt hash mismatch"):
+            project_receipt(tampered)
+
+    def test_forged_receipt_hash_is_rejected(self):
+        receipt = self._receipt()
+        tampered = deepcopy(receipt)
+        tampered["receiptHash"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "receipt hash mismatch"):
+            project_receipt(tampered)
+
     def test_same_receipt_produces_same_projection_hash(self):
         receipt = self._receipt()
         first = project_receipt(receipt)

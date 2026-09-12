@@ -1,0 +1,46 @@
+{
+  "schema": "axm.capability/v1",
+  "capabilityId": "axm.causal-loop.train-platform.process/v1",
+  "provider": {
+    "repository": "mike-axiom-mir/axm-casual-loop",
+    "module": "causal_loop.process_adapter",
+    "entrypoint": "scripts/causal_loop_ndjson.py",
+    "licenseFile": "LICENSE"
+  },
+  "protocol": {
+    "transport": "ndjson-stdio",
+    "requestSchema": "axm.causal-loop.process-request/v1",
+    "responseSchema": "axm.causal-loop.process-response/v1",
+    "operations": [
+      "describe",
+      "run",
+      "verify"
+    ]
+  },
+  "engine": {
+    "loopId": "axm.train-platform-loop/v0.01",
+    "loopVersion": "0.08",
+    "receiptSchema": "axm.causal-loop.run-receipt/v0.08",
+    "engineSignature": "678c84d030c3868b352a32d4c8a1ce3635ac4d679152de02d2a52a3c25feb64f",
+    "allowedActions": [
+      "WAIT",
+      "BLOCK_DOOR",
+      "TRIGGER_ALARM",
+      "TALK_TO_PASSENGER"
+    ],
+    "maxTimedInfluences": 64,
+    "maxWavesLimit": 256
+  },
+  "properties": {
+    "deterministic": true,
+    "headless": true,
+    "offline": true,
+    "thirdPartyDependencies": false
+  },
+  "authority": {
+    "commitsHistory": false,
+    "writesCanonicalState": false,
+    "merges": false,
+    "declaresCanon": false
+  }
+}
