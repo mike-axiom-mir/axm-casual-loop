@@ -251,6 +251,8 @@ def live_descriptor(root: Path) -> dict[str, Any]:
 
 def build_artifacts(root: Path | str = Path.cwd()) -> dict[str, str]:
     root = Path(root)
+    if not regular_file(root, LICENSE_PATH).read_text(encoding="utf-8").startswith("# PolyForm Noncommercial License 1.0.0"):
+        raise DiscoveryError("current license evidence drift")
     validate_marker(root)
     descriptor = validate_descriptor(read_json_file(root, DESCRIPTOR_PATH))
     observed = validate_descriptor(live_descriptor(root))
@@ -267,7 +269,7 @@ def build_artifacts(root: Path | str = Path.cwd()) -> dict[str, str]:
         "providers": [REPOSITORY],
         "consumers": [],
         "summary": "Offline deterministic NDJSON process adapter for the bounded Train Platform causal loop.",
-        "license": "Apache-2.0",
+        "license": "PolyForm-Noncommercial-1.0.0",
         "runtime": {
             "language": "python",
             "dependencies": 0,
